@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# Project Data (Large Files)
+backend/data/datasets/
+backend/data/event_logs/
+backend/data/training_manifest.json
+
+# Models
+backend/models/*.pkl
+
+# VS Code
+.vscode/
+
+# System
+.DS_Store
+Thumbs.db
