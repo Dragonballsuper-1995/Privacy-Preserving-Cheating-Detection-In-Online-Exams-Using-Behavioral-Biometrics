@@ -10,18 +10,25 @@ import os
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
+    # Application
+    environment: str = "development"
+    debug: bool = True
+    
     # Database - SQLite for dev, PostgreSQL for production
     database_url: str = "sqlite:///./data/cheating_detector.db"
     
     # Security
     secret_key: str = "dev-secret-key-change-in-production"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
     
     # CORS
     cors_origins: List[str] = ["http://localhost:3000"]
+    allowed_origins: str = "http://localhost:3000"  # For compatibility
     
     # ML Model Settings
     similarity_threshold: float = 0.85
-    risk_threshold: float = 0.75
+    risk_threshold: float = 0.50  # Lowered from 0.75 for better detection
     
     # Feature Extraction Settings
     min_pause_duration: int = 2000  # milliseconds

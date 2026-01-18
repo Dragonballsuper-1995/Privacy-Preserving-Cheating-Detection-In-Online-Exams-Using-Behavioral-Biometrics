@@ -1,0 +1,198 @@
+{
+    "meta": {
+        "category": "coding",
+        "subject": "Programming Challenges",
+        "description": "Coding problems with test cases - Medium level"
+    },
+    "questions": [
+        {
+            "content": "Implement the 'Two Sum' problem: Given an array of integers and a target sum, return the indices of two numbers that add up to the target. You may assume each input has exactly one solution.",
+            "type": "coding",
+            "category": "coding",
+            "difficulty": "medium",
+            "subject": "Programming Challenges",
+            "topic": "Arrays & Hash Tables",
+            "points": 30,
+            "language": "python",
+            "code_template": "def two_sum(nums: list, target: int) -> list:\n    \"\"\"\n    Find two numbers in the list that add up to target.\n    Return their indices as a list.\n    \n    Examples:\n        two_sum([2, 7, 11, 15], 9) -> [0, 1]\n        two_sum([3, 2, 4], 6) -> [1, 2]\n    \"\"\"\n    # Your code here\n    pass",
+            "test_cases": [
+                {
+                    "input": {
+                        "nums": [
+                            2,
+                            7,
+                            11,
+                            15
+                        ],
+                        "target": 9
+                    },
+                    "expected": [
+                        0,
+                        1
+                    ]
+                },
+                {
+                    "input": {
+                        "nums": [
+                            3,
+                            2,
+                            4
+                        ],
+                        "target": 6
+                    },
+                    "expected": [
+                        1,
+                        2
+                    ]
+                },
+                {
+                    "input": {
+                        "nums": [
+                            3,
+                            3
+                        ],
+                        "target": 6
+                    },
+                    "expected": [
+                        0,
+                        1
+                    ]
+                },
+                {
+                    "input": {
+                        "nums": [
+                            1,
+                            5,
+                            3,
+                            7,
+                            9
+                        ],
+                        "target": 12
+                    },
+                    "expected": [
+                        2,
+                        4
+                    ]
+                }
+            ],
+            "hints": [
+                "Use a hash map to store numbers you've seen",
+                "For each number, check if (target - number) exists in the hash map",
+                "This can be solved in O(n) time"
+            ],
+            "source": "LeetCode #1",
+            "tags": [
+                "arrays",
+                "hash-table",
+                "leetcode"
+            ]
+        },
+        {
+            "content": "Write a function to reverse a linked list. The input is the head of the list, and you should return the new head.",
+            "type": "coding",
+            "category": "coding",
+            "difficulty": "medium",
+            "subject": "Programming Challenges",
+            "topic": "Linked Lists",
+            "points": 30,
+            "language": "python",
+            "code_template": "class ListNode:\n    def __init__(self, val=0, next=None):\n        self.val = val\n        self.next = next\n\ndef reverse_linked_list(head: ListNode) -> ListNode:\n    \"\"\"\n    Reverse a singly linked list.\n    \n    Examples:\n        Input: 1 -> 2 -> 3 -> 4 -> 5\n        Output: 5 -> 4 -> 3 -> 2 -> 1\n    \"\"\"\n    # Your code here\n    pass",
+            "test_cases": [
+                {
+                    "input": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ],
+                    "expected": [
+                        5,
+                        4,
+                        3,
+                        2,
+                        1
+                    ]
+                },
+                {
+                    "input": [
+                        1,
+                        2
+                    ],
+                    "expected": [
+                        2,
+                        1
+                    ]
+                },
+                {
+                    "input": [],
+                    "expected": []
+                },
+                {
+                    "input": [
+                        1
+                    ],
+                    "expected": [
+                        1
+                    ]
+                }
+            ],
+            "hints": [
+                "Use three pointers: previous, current, and next",
+                "Iterate through the list and reverse the links",
+                "Don't forget to handle the edge case of an empty list"
+            ],
+            "source": "LeetCode #206",
+            "tags": [
+                "linked-list",
+                "pointers",
+                "leetcode"
+            ]
+        },
+        {
+            "content": "Implement a function to find the longest substring without repeating characters.",
+            "type": "coding",
+            "category": "coding",
+            "difficulty": "medium",
+            "subject": "Programming Challenges",
+            "topic": "Strings & Sliding Window",
+            "points": 35,
+            "language": "python",
+            "code_template": "def longest_unique_substring(s: str) -> int:\n    \"\"\"\n    Find the length of the longest substring without repeating characters.\n    \n    Examples:\n        longest_unique_substring(\"abcabcbb\") -> 3  # \"abc\"\n        longest_unique_substring(\"bbbbb\") -> 1     # \"b\"\n        longest_unique_substring(\"pwwkew\") -> 3    # \"wke\"\n    \"\"\"\n    # Your code here\n    pass",
+            "test_cases": [
+                {
+                    "input": "abcabcbb",
+                    "expected": 3
+                },
+                {
+                    "input": "bbbbb",
+                    "expected": 1
+                },
+                {
+                    "input": "pwwkew",
+                    "expected": 3
+                },
+                {
+                    "input": "",
+                    "expected": 0
+                },
+                {
+                    "input": "dvdf",
+                    "expected": 3
+                }
+            ],
+            "hints": [
+                "Use the sliding window technique",
+                "Maintain a set or hash map of characters in the current window",
+                "Expand the window when no duplicates, shrink when duplicates found"
+            ],
+            "source": "LeetCode #3",
+            "tags": [
+                "strings",
+                "sliding-window",
+                "hash-table",
+                "leetcode"
+            ]
+        }
+    ]
+}

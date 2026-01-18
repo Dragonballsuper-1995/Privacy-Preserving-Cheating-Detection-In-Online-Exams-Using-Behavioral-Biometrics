@@ -250,7 +250,7 @@ def simulate_session(
 
 def save_simulated_session(session_data: Dict[str, Any]) -> str:
     """
-    Save a simulated session to JSONL file.
+    Save a simulated session to JSONL file with metadata.
     
     Args:
         session_data: Session data from simulate_session()
@@ -260,12 +260,27 @@ def save_simulated_session(session_data: Dict[str, Any]) -> str:
     """
     session_id = session_data["session_id"]
     log_file = os.path.join(settings.event_logs_dir, f"session_{session_id}.jsonl")
+    metadata_file = os.path.join(settings.event_logs_dir, f"session_{session_id}.meta.json")
     
     os.makedirs(settings.event_logs_dir, exist_ok=True)
     
+    # Save events to JSONL
     with open(log_file, 'w') as f:
         for event in session_data["events"]:
             f.write(json.dumps(event) + "\n")
+    
+    # Save metadata marking this as simulated
+    metadata = {
+        "session_id": session_id,
+        "is_simulated": True,
+        "is_cheater": session_data.get("is_cheater", False),
+        "created_at": datetime.utcnow().isoformat(),
+        "question_count": session_data.get("question_count", 0),
+        "total_events": len(session_data.get("events", [])),
+    }
+    
+    with open(metadata_file, 'w') as f:
+        json.dump(metadata, f, indent=2)
     
     return log_file
 

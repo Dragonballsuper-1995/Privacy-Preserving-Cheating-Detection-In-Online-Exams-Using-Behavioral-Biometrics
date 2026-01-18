@@ -1,0 +1,13 @@
+{
+  "training_date": "2026-01-18T10:37:35.102364",
+  "datasets_used": [
+    "CMU"
+  ],
+  "total_samples": 408,
+  "train_samples": 326,
+  "test_samples": 82,
+  "feature_count": 15,
+  "contamination": 0.1,
+  "train_anomaly_rate": 0.10122699386503067,
+  "test_anomaly_rate": 0.07317073170731707
+}

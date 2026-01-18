@@ -1,0 +1,184 @@
+{
+    "meta": {
+        "category": "mcq",
+        "subject": "Python Programming",
+        "description": "Fundamental Python concepts and syntax"
+    },
+    "questions": [
+        {
+            "content": "What is the time complexity of accessing an element in a Python list by index?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "easy",
+            "subject": "Python Programming",
+            "topic": "Data Structures",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "O(1)"
+                },
+                {
+                    "id": "b",
+                    "text": "O(n)"
+                },
+                {
+                    "id": "c",
+                    "text": "O(log n)"
+                },
+                {
+                    "id": "d",
+                    "text": "O(n²)"
+                }
+            ],
+            "correct_option": "a",
+            "explanation": "Python lists are implemented as dynamic arrays, allowing constant-time O(1) access by index.",
+            "source": "Python Data Structures Fundamentals",
+            "tags": [
+                "complexity",
+                "list",
+                "basics"
+            ]
+        },
+        {
+            "content": "Which of the following is NOT a valid way to create a dictionary in Python?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "easy",
+            "subject": "Python Programming",
+            "topic": "Data Types",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "d = {}"
+                },
+                {
+                    "id": "b",
+                    "text": "d = dict()"
+                },
+                {
+                    "id": "c",
+                    "text": "d = {'key': 'value'}"
+                },
+                {
+                    "id": "d",
+                    "text": "d = ['key': 'value']"
+                }
+            ],
+            "correct_option": "d",
+            "explanation": "Square brackets [] are used for lists, not dictionaries. Curly braces {} are used for dictionaries.",
+            "source": "Python Basics",
+            "tags": [
+                "dictionary",
+                "syntax",
+                "basics"
+            ]
+        },
+        {
+            "content": "What will be the output of: print(type(lambda x: x * 2))?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "medium",
+            "subject": "Python Programming",
+            "topic": "Functions",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "<class 'function'>"
+                },
+                {
+                    "id": "b",
+                    "text": "<class 'lambda'>"
+                },
+                {
+                    "id": "c",
+                    "text": "<class 'method'>"
+                },
+                {
+                    "id": "d",
+                    "text": "<class 'object'>"
+                }
+            ],
+            "correct_option": "a",
+            "explanation": "Lambda expressions in Python are anonymous functions and have the type 'function'.",
+            "source": "Python Functions",
+            "tags": [
+                "lambda",
+                "functions",
+                "types"
+            ]
+        },
+        {
+            "content": "Which method is used to add an element to the end of a list?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "easy",
+            "subject": "Python Programming",
+            "topic": "List Methods",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "add()"
+                },
+                {
+                    "id": "b",
+                    "text": "append()"
+                },
+                {
+                    "id": "c",
+                    "text": "insert()"
+                },
+                {
+                    "id": "d",
+                    "text": "extend()"
+                }
+            ],
+            "correct_option": "b",
+            "explanation": "The append() method adds a single element to the end of a list.",
+            "source": "Python List Operations",
+            "tags": [
+                "list",
+                "methods",
+                "basics"
+            ]
+        },
+        {
+            "content": "What is the difference between '==' and 'is' operators in Python?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "medium",
+            "subject": "Python Programming",
+            "topic": "Operators",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "'==' compares values, 'is' compares object identity"
+                },
+                {
+                    "id": "b",
+                    "text": "'==' compares object identity, 'is' compares values"
+                },
+                {
+                    "id": "c",
+                    "text": "They are exactly the same"
+                },
+                {
+                    "id": "d",
+                    "text": "'is' is only used for None comparisons"
+                }
+            ],
+            "correct_option": "a",
+            "explanation": "'==' checks if values are equal, while 'is' checks if two variables reference the same object in memory.",
+            "source": "Python Operators",
+            "tags": [
+                "operators",
+                "comparison",
+                "identity"
+            ]
+        }
+    ]
+}

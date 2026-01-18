@@ -2,11 +2,17 @@
 Exams API - Manages exam content and questions.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, List
 from enum import Enum
 import uuid
+import sys
+from pathlib import Path
+
+# Add app utils to path for question loader
+sys.path.append(str(Path(__file__).parent.parent))
+from app.utils.question_loader import QuestionLoader
 
 router = APIRouter()
 
@@ -14,8 +20,15 @@ router = APIRouter()
 class QuestionType(str, Enum):
     """Types of exam questions."""
     MCQ = "mcq"
-    SHORT_ANSWER = "short_answer"
+    SUBJECTIVE = "subjective"
     CODING = "coding"
+
+
+class Difficulty(str, Enum):
+    """Question difficulty levels."""
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
 
 
 class MCQOption(BaseModel):
@@ -31,6 +44,15 @@ class Question(BaseModel):
     content: str
     points: int = 10
     
+    # New metadata
+    category: Optional[QuestionType] = None
+    difficulty: Optional[Difficulty] = None
+    subject: Optional[str] = None
+    topic: Optional[str] = None
+    tags: Optional[List[str]] = None
+    source: Optional[str] = None
+    explanation: Optional[str] = None
+    
     # MCQ specific
     options: Optional[List[MCQOption]] = None
     correct_option: Optional[str] = None
@@ -39,6 +61,11 @@ class Question(BaseModel):
     code_template: Optional[str] = None
     language: Optional[str] = None
     test_cases: Optional[List[dict]] = None
+    
+    # Subjective specific
+    min_words: Optional[int] = None
+    max_words: Optional[int] = None
+    rubric: Optional[dict] = None
 
 
 class Exam(BaseModel):
@@ -68,6 +95,10 @@ MOCK_EXAMS: dict = {
             Question(
                 id="q1",
                 type=QuestionType.MCQ,
+                category=QuestionType.MCQ,
+                difficulty=Difficulty.EASY,
+                subject="Python Programming",
+                topic="Data Types",
                 content="What is the output of: print(type([]))?",
                 points=5,
                 options=[
@@ -81,6 +112,10 @@ MOCK_EXAMS: dict = {
             Question(
                 id="q2",
                 type=QuestionType.MCQ,
+                category=QuestionType.MCQ,
+                difficulty=Difficulty.EASY,
+                subject="Python Programming",
+                topic="Functions",
                 content="Which keyword is used to define a function in Python?",
                 points=5,
                 options=[
@@ -93,19 +128,35 @@ MOCK_EXAMS: dict = {
             ),
             Question(
                 id="q3",
-                type=QuestionType.SHORT_ANSWER,
+                type=QuestionType.SUBJECTIVE,
+                category=QuestionType.SUBJECTIVE,
+                difficulty=Difficulty.MEDIUM,
+                subject="Python Programming",
+                topic="Data Structures",
                 content="Explain the difference between a list and a tuple in Python. When would you use each?",
-                points=15
+                points=15,
+                min_words=50,
+                max_words=150
             ),
             Question(
                 id="q4",
-                type=QuestionType.SHORT_ANSWER,
+                type=QuestionType.SUBJECTIVE,
+                category=QuestionType.SUBJECTIVE,
+                difficulty=Difficulty.MEDIUM,
+                subject="Python Programming",
+                topic="Advanced Concepts",
                 content="What is a Python decorator? Provide a simple example of when you might use one.",
-                points=15
+                points=15,
+                min_words=50,
+                max_words=150
             ),
             Question(
                 id="q5",
                 type=QuestionType.CODING,
+                category=QuestionType.CODING,
+                difficulty=Difficulty.MEDIUM,
+                subject="Python Programming",
+                topic="String Manipulation",
                 content="Write a function called `is_palindrome` that takes a string and returns True if it's a palindrome, False otherwise. Ignore case and spaces.",
                 points=25,
                 language="python",
@@ -133,6 +184,10 @@ MOCK_EXAMS: dict = {
             Question(
                 id="q6",
                 type=QuestionType.CODING,
+                category=QuestionType.CODING,
+                difficulty=Difficulty.MEDIUM,
+                subject="Data Structures & Algorithms",
+                topic="Arrays",
                 content="Write a function called `two_sum` that takes a list of integers and a target sum. Return the indices of the two numbers that add up to the target.",
                 points=25,
                 language="python",
@@ -157,6 +212,88 @@ MOCK_EXAMS: dict = {
         ]
     )
 }
+
+# Initialize question loader
+question_loader = QuestionLoader()
+
+# Create a new demo exam with questions from the question bank
+def create_categorized_exam():
+    """Create exam with questions from the question bank."""
+    import uuid
+    
+    # Load questions from bank
+    mcq_questions = question_loader.get_random_questions('mcq', count=3, difficulty='easy')
+    coding_questions = question_loader.get_random_questions('coding', count=2)
+    subjective_questions = question_loader.get_random_questions('subjective', count=2, difficulty='medium')
+    
+    questions = []
+    
+    # Add MCQ questions
+    for q in mcq_questions:
+        questions.append(Question(
+            id=str(uuid.uuid4()),
+            type=QuestionType.MCQ,
+            category=QuestionType.MCQ,
+            difficulty=getattr(Difficulty, q.get('difficulty', 'medium').upper()),
+            subject=q.get('subject'),
+            topic=q.get('topic'),
+            content=q['content'],
+            points=q.get('points', 5),
+            options=[MCQOption(**opt) for opt in q.get('options', [])],
+            correct_option=q.get('correct_option'),
+            tags=q.get('tags'),
+            source=q.get('source')
+        ))
+    
+    # Add Coding questions
+    for q in coding_questions:
+        questions.append(Question(
+            id=str(uuid.uuid4()),
+            type=QuestionType.CODING,
+            category=QuestionType.CODING,
+            difficulty=getattr(Difficulty, q.get('difficulty', 'medium').upper()),
+            subject=q.get('subject'),
+            topic=q.get('topic'),
+            content=q['content'],
+            points=q.get('points', 20),
+            code_template=q.get('code_template'),
+            language=q.get('language', 'python'),
+            test_cases=q.get('test_cases', []),
+            tags=q.get('tags'),
+            source=q.get('source')
+        ))
+    
+    # Add Subjective questions
+    for q in subjective_questions:
+        questions.append(Question(
+            id=str(uuid.uuid4()),
+            type=QuestionType.SUBJECTIVE,
+            category=QuestionType.SUBJECTIVE,
+            difficulty=getattr(Difficulty, q.get('difficulty', 'medium').upper()),
+            subject=q.get('subject'),
+            topic=q.get('topic'),
+            content=q['content'],
+            points=q.get('points', 15),
+            min_words=q.get('min_words'),
+            max_words=q.get('max_words'),
+            rubric=q.get('rubric'),
+            tags=q.get('tags'),
+            source=q.get('source')
+        ))
+    
+    return Exam(
+        id="categorized-exam-1",
+        title="Comprehensive Programming Assessment",
+        description="Multi-category exam with MCQ, Coding, and Subjective questions covering Python, Algorithms, and CS fundamentals.",
+        duration_minutes=60,
+        questions=questions
+    )
+
+# Add the categorized exam to mock exams
+try:
+    MOCK_EXAMS["categorized-exam-1"] = create_categorized_exam()
+except Exception as e:
+    print(f"Warning: Could not create categorized exam: {e}")
 
 # Custom exams storage
 exams_db: dict = {}
@@ -226,3 +363,153 @@ async def add_question(exam_id: str, question: Question):
     
     exams_db[exam_id].questions.append(question)
     return {"message": "Question added", "question_id": question.id}
+
+
+# New endpoints for category support
+
+@router.get("/categories")
+async def get_categories():
+    """Get list of available question categories."""
+    return {
+        "categories": [
+            {"id": "mcq", "name": "Multiple Choice Questions", "description": "Questions with predefined options"},
+            {"id": "coding", "name": "Coding Problems", "description": "Programming challenges with test cases"},
+            {"id": "subjective", "name": "Subjective Questions", "description": "Essay and short answer questions"}
+        ]
+    }
+
+
+@router.get("/subjects")
+async def get_subjects(category: Optional[str] = None):
+    """Get list of available subjects."""
+    loader = QuestionLoader()
+    subjects = loader.get_subjects(category)
+    return {"subjects": subjects}
+
+
+@router.get("/topics")
+async def get_topics(subject: Optional[str] = None):
+    """Get list of available topics."""
+    loader = QuestionLoader()
+    topics = loader.get_topics(subject)
+    return {"topics": topics}
+
+
+@router.get("/questions/search")
+async def search_questions(
+    category: Optional[str] = Query(None, description="Filter by category"),
+    difficulty: Optional[str] = Query(None, description="Filter by difficulty"),
+    subject: Optional[str] = Query(None, description="Filter by subject"),
+    topic: Optional[str] = Query(None, description="Filter by topic"),
+    tags: Optional[str] = Query(None, description="Comma-separated list of tags")
+):
+    """Search and filter questions from the question bank."""
+    loader = QuestionLoader()
+    
+    if category:
+        questions = loader.load_category(category)
+    else:
+        all_qs = loader.load_all()
+        questions = []
+        for qs in all_qs.values():
+            questions.extend(qs)
+    
+    # Apply filters
+    tag_list = tags.split(',') if tags else None
+    filtered = loader.filter_questions(
+        questions,
+        difficulty=difficulty,
+        subject=subject,
+        topic=topic,
+        tags=tag_list
+    )
+    
+    # Convert to Question models (without answers)
+    result = []
+    for idx, q in enumerate(filtered):
+        q_copy = q.copy()
+        if 'correct_option' in q_copy:
+            del q_copy['correct_option']
+        if 'explanation' in q_copy:
+            del q_copy['explanation']
+        if 'id' not in q_copy:
+            q_copy['id'] = f"q_{idx}"
+        result.append(q_copy)
+    
+    return {"questions": result, "count": len(result)}
+
+
+@router.get("/questions/random")
+async def get_random_questions(
+    category: str = Query(..., description="Category to select from"),
+    count: int = Query(5, description="Number of questions to get"),
+    difficulty: Optional[str] = Query(None, description="Filter by difficulty"),
+    subject: Optional[str] = Query(None, description="Filter by subject")
+):
+    """Get random questions from the question bank."""
+    loader = QuestionLoader()
+    
+    questions = loader.get_random_questions(
+        category=category,
+        count=count,
+        difficulty=difficulty,
+        subject=subject
+    )
+    
+    # Convert to Question models (without answers)
+    result = []
+    for idx, q in enumerate(questions):
+        q_copy = q.copy()
+        if 'correct_option' in q_copy:
+            del q_copy['correct_option']
+        if 'explanation' in q_copy:
+            del q_copy['explanation']
+        if 'id' not in q_copy:
+            q_copy['id'] = str(uuid.uuid4())
+        result.append(q_copy)
+    
+    return {"questions": result, "count": len(result)}
+
+
+@router.get("/{exam_id}/by-category")
+async def get_exam_by_category(exam_id: str, include_answers: bool = False):
+    """Get exam questions grouped by category."""
+    all_exams = {**MOCK_EXAMS, **exams_db}
+    
+    if exam_id not in all_exams:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    
+    exam = all_exams[exam_id]
+    
+    # Group questions by category
+    categorized = {
+        "mcq": [],
+        "coding": [],
+        "subjective": []
+    }
+    
+    for q in exam.questions:
+        q_dict = q.model_dump() if hasattr(q, 'model_dump') else q.dict()
+        
+        # Remove answers if not requested
+        if not include_answers:
+            if 'correct_option' in q_dict:
+                del q_dict['correct_option']
+            if 'explanation' in q_dict:
+                del q_dict['explanation']
+        
+        # Determine category
+        category = q_dict.get('category') or q_dict.get('type')
+        
+        if category in categorized:
+            categorized[category].append(q_dict)
+    
+    return {
+        "id": exam.id,
+        "title": exam.title,
+        "description": exam.description,
+        "duration_minutes": exam.duration_minutes,
+        "categories": categorized,
+        "total_questions": len(exam.questions)
+    }
+

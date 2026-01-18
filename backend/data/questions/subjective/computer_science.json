@@ -1,0 +1,152 @@
+{
+    "meta": {
+        "category": "subjective",
+        "subject": "Computer Science Fundamentals",
+        "description": "Theory questions requiring detailed explanations"
+    },
+    "questions": [
+        {
+            "content": "Explain the differences between SQL and NoSQL databases. Discuss their use cases, advantages, and when you would choose one over the other.",
+            "type": "subjective",
+            "category": "subjective",
+            "difficulty": "medium",
+            "subject": "Database Systems",
+            "topic": "Database Types",
+            "points": 20,
+            "min_words": 100,
+            "max_words": 300,
+            "rubric": {
+                "key_points": [
+                    "ACID vs BASE properties",
+                    "Schema flexibility (structured vs unstructured)",
+                    "Scalability differences (vertical vs horizontal)",
+                    "Query language and complexity",
+                    "Real-world use case examples"
+                ],
+                "scoring_guide": "Full marks: Covers 4+ key points with clear examples. Partial: 2-3 points covered."
+            },
+            "explanation": "SQL databases are relational with fixed schemas and ACID compliance, ideal for structured data. NoSQL databases are flexible, schema-less, and horizontally scalable, better for unstructured data and high-volume applications.",
+            "source": "Database Fundamentals",
+            "tags": [
+                "databases",
+                "sql",
+                "nosql",
+                "system-design"
+            ]
+        },
+        {
+            "content": "What is the difference between a process and a thread? Explain with examples and discuss the advantages and disadvantages of multi-threading.",
+            "type": "subjective",
+            "category": "subjective",
+            "difficulty": "medium",
+            "subject": "Operating Systems",
+            "topic": "Processes & Threads",
+            "points": 20,
+            "min_words": 100,
+            "max_words": 300,
+            "rubric": {
+                "key_points": [
+                    "Process: independent execution unit with own memory space",
+                    "Thread: lightweight execution unit within a process",
+                    "Resource sharing vs isolation",
+                    "Context switching overhead differences",
+                    "Multi-threading advantages and challenges"
+                ],
+                "scoring_guide": "Award 4 points per key point covered with clarity."
+            },
+            "explanation": "Processes are independent with separate memory, while threads share memory within a process. Multi-threading enables parallelism but requires synchronization to avoid race conditions.",
+            "source": "Operating Systems Concepts",
+            "tags": [
+                "operating-systems",
+                "processes",
+                "threads",
+                "concurrency"
+            ]
+        },
+        {
+            "content": "Describe the OSI model and explain the function of each layer. Why is this layered architecture important?",
+            "type": "subjective",
+            "category": "subjective",
+            "difficulty": "hard",
+            "subject": "Computer Networks",
+            "topic": "Network Architecture",
+            "points": 25,
+            "min_words": 150,
+            "max_words": 400,
+            "rubric": {
+                "key_points": [
+                    "All 7 layers correctly identified",
+                    "Function of each layer explained",
+                    "Examples of protocols at each layer",
+                    "Advantages of layered architecture",
+                    "Data encapsulation concept"
+                ],
+                "scoring_guide": "5 points per key point. Deduct for missing layers or incorrect functions."
+            },
+            "explanation": "OSI has 7 layers: Physical, Data Link, Network, Transport, Session, Presentation, Application. Layering provides modularity, standardization, and easier troubleshooting.",
+            "source": "Computer Networks",
+            "tags": [
+                "networking",
+                "osi-model",
+                "protocols"
+            ]
+        },
+        {
+            "content": "What is Object-Oriented Programming (OOP)? Explain the four main principles of OOP with examples.",
+            "type": "subjective",
+            "category": "subjective",
+            "difficulty": "easy",
+            "subject": "Software Engineering",
+            "topic": "Programming Paradigms",
+            "points": 15,
+            "min_words": 80,
+            "max_words": 200,
+            "rubric": {
+                "key_points": [
+                    "Encapsulation: bundling data and methods",
+                    "Abstraction: hiding complexity",
+                    "Inheritance: code reuse through parent-child relationships",
+                    "Polymorphism: many forms, method overriding",
+                    "At least one example for each principle"
+                ],
+                "scoring_guide": "3 points per principle with example."
+            },
+            "explanation": "OOP organizes code around objects. The four principles are: Encapsulation (data hiding), Abstraction (interface separation), Inheritance (reusability), and Polymorphism (flexibility).",
+            "source": "OOP Fundamentals",
+            "tags": [
+                "oop",
+                "programming",
+                "software-engineering"
+            ]
+        },
+        {
+            "content": "Explain what RESTful APIs are and describe the key principles that make an API RESTful. What are the common HTTP methods used in REST?",
+            "type": "subjective",
+            "category": "subjective",
+            "difficulty": "medium",
+            "subject": "Web Development",
+            "topic": "API Design",
+            "points": 20,
+            "min_words": 100,
+            "max_words": 250,
+            "rubric": {
+                "key_points": [
+                    "REST stands for Representational State Transfer",
+                    "Stateless communication",
+                    "Resource-based URLs",
+                    "HTTP methods: GET, POST, PUT, DELETE, PATCH",
+                    "Response formats (JSON/XML)"
+                ],
+                "scoring_guide": "4 points per key point."
+            },
+            "explanation": "REST is an architectural style for APIs using HTTP. Key principles: statelessness, resource-based URIs, standard HTTP methods, and uniform interface.",
+            "source": "Web API Design",
+            "tags": [
+                "rest",
+                "api",
+                "web-development",
+                "http"
+            ]
+        }
+    ]
+}

@@ -6,6 +6,7 @@ Uses the new modular feature extraction pipeline.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict
+from datetime import datetime
 import json
 import os
 
@@ -217,9 +218,21 @@ async def get_session_timeline(session_id: str, limit: int = 100):
     }
 
 
+
 @router.get("/dashboard/summary")
 async def get_dashboard_summary():
-    """Get summary statistics for the admin dashboard."""
+    """
+    Get summary statistics for all analyzed sessions.
+    Returns aggregated data and list of all sessions with risk scores.
+    
+    RISK SCORING FORMULA:
+    final_risk = (behavioral * 0.35) + (anomaly * 0.35) + (similarity * 0.30)
+    
+    Where:
+    - behavioral = average of (typing, hesitation, paste, focus) scores
+    - anomaly = Isolation Forest anomaly detection score
+    - similarity = Answer similarity score (if available)
+    """
     log_dir = settings.event_logs_dir
     
     if not os.path.exists(log_dir):
@@ -236,6 +249,32 @@ async def get_dashboard_summary():
     for filename in os.listdir(log_dir):
         if filename.startswith("session_") and filename.endswith(".jsonl"):
             session_id = filename.replace("session_", "").replace(".jsonl", "")
+            filepath = os.path.join(log_dir, filename)
+            metadata_file = os.path.join(log_dir, f"session_{session_id}.meta.json")
+            
+            # Get file modification time as created_at
+            try:
+                file_mtime = os.path.getmtime(filepath)
+                created_at = datetime.fromtimestamp(file_mtime).isoformat()
+            except:
+                created_at = None
+            
+            # Check if this is a simulated session by looking for metadata file
+            is_simulated = False
+            if os.path.exists(metadata_file):
+                try:
+                    with open(metadata_file, 'r') as mf:
+                        metadata = json.load(mf)
+                        is_simulated = metadata.get('is_simulated', False)
+                except:
+                    pass
+            
+            # Fallback: check session_id pattern
+            if not is_simulated:
+                is_simulated = (
+                    session_id.startswith('sim-') or 
+                    session_id.startswith('test-')
+                )
             
             # Load and analyze
             events = load_session_events(session_id)
@@ -252,6 +291,8 @@ async def get_dashboard_summary():
                     "is_flagged": features.is_flagged,
                     "event_count": len(events),
                     "flag_reasons": features.flag_reasons[:3],  # Top 3 reasons
+                    "created_at": created_at,  # Added timestamp
+                    "is_simulated": is_simulated,  # Use the value determined from metadata
                     "scores": {
                         "typing": features.typing_score,
                         "hesitation": features.hesitation_score,
@@ -260,8 +301,11 @@ async def get_dashboard_summary():
                     }
                 })
     
-    # Sort by risk score (highest first)
-    sessions.sort(key=lambda x: x["risk_score"], reverse=True)
+    # Sort by created_at (most recent first), then by risk score
+    sessions.sort(key=lambda x: (
+        x.get("created_at") or "0",  # Put sessions without timestamps last
+        -x["risk_score"]
+    ), reverse=True)
     
     return {
         "total_sessions": len(sessions),

@@ -1,0 +1,18 @@
+# Test Dependencies
+
+# Core testing
+pytest>=7.4.4
+pytest-cov>=4.1.0  # Coverage reporting
+pytest-asyncio>=0.21.0  # Async testing
+
+# Load testing
+locust>=2.15.0
+
+# Performance profiling
+psutil>=5.9.0  # System and process utilities
+
+# HTTP testing
+httpx>=0.26.0  # Already in main requirements
+
+# Mocking (if needed)
+pytest-mock>=3.12.0

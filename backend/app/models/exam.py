@@ -14,8 +14,15 @@ from app.core.database import Base
 class QuestionType(str, enum.Enum):
     """Types of exam questions."""
     MCQ = "mcq"
-    SHORT_ANSWER = "short_answer"
+    SUBJECTIVE = "subjective"
     CODING = "coding"
+
+
+class Difficulty(str, enum.Enum):
+    """Question difficulty levels."""
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
 
 
 class Exam(Base):
@@ -55,6 +62,15 @@ class Question(Base):
     points = Column(Integer, default=10)
     order = Column(Integer, default=0)
     
+    # New metadata fields
+    category = Column(Enum(QuestionType))  # Same as type, for filtering
+    difficulty = Column(Enum(Difficulty), default=Difficulty.MEDIUM)
+    subject = Column(String(100))
+    topic = Column(String(100))
+    tags = Column(JSON)  # List of strings
+    source = Column(String(200))  # Where the question came from
+    explanation = Column(Text)  # Explanation for correct answer
+    
     # MCQ specific
     options = Column(JSON)  # List of {id, text}
     correct_option = Column(String(10))
@@ -63,6 +79,11 @@ class Question(Base):
     code_template = Column(Text)
     language = Column(String(50), default="python")
     test_cases = Column(JSON)  # List of {input, expected}
+    
+    # Subjective specific
+    min_words = Column(Integer)  # Minimum word count
+    max_words = Column(Integer)  # Maximum word count
+    rubric = Column(JSON)  # Scoring rubric
 
     # Relationships
     exam = relationship("Exam", back_populates="questions")
@@ -72,12 +93,22 @@ class Question(Base):
         result = {
             "id": self.id,
             "type": self.type.value if self.type else None,
+            "category": self.category.value if self.category else (self.type.value if self.type else None),
+            "difficulty": self.difficulty.value if self.difficulty else None,
+            "subject": self.subject,
+            "topic": self.topic,
             "content": self.content,
             "points": self.points,
+            "tags": self.tags,
+            "source": self.source,
+            "explanation": self.explanation if include_answer else None,
             "options": self.options,
             "code_template": self.code_template,
             "language": self.language,
             "test_cases": self.test_cases,
+            "min_words": self.min_words,
+            "max_words": self.max_words,
+            "rubric": self.rubric,
         }
         if include_answer:
             result["correct_option"] = self.correct_option

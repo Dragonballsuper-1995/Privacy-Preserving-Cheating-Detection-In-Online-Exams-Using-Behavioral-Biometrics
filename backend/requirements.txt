@@ -12,6 +12,7 @@ alembic>=1.13.1
 
 # ML & NLP
 sentence-transformers>=2.2.2
+torch>=2.0.0  # Required for sentence-transformers
 scikit-learn>=1.4.0
 numpy>=1.26.3
 pandas>=2.1.4

@@ -1,0 +1,185 @@
+{
+    "meta": {
+        "category": "mcq",
+        "subject": "Data Structures & Algorithms",
+        "description": "DSA concepts, complexity analysis, and algorithms"
+    },
+    "questions": [
+        {
+            "content": "What is the time complexity of binary search on a sorted array?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "medium",
+            "subject": "Data Structures & Algorithms",
+            "topic": "Search Algorithms",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "O(n)"
+                },
+                {
+                    "id": "b",
+                    "text": "O(log n)"
+                },
+                {
+                    "id": "c",
+                    "text": "O(n log n)"
+                },
+                {
+                    "id": "d",
+                    "text": "O(1)"
+                }
+            ],
+            "correct_option": "b",
+            "explanation": "Binary search repeatedly divides the search space in half, resulting in O(log n) time complexity.",
+            "source": "Algorithm Fundamentals",
+            "tags": [
+                "algorithms",
+                "complexity",
+                "search",
+                "binary-search"
+            ]
+        },
+        {
+            "content": "Which data structure uses LIFO (Last In First Out) principle?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "easy",
+            "subject": "Data Structures & Algorithms",
+            "topic": "Data Structures",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "Queue"
+                },
+                {
+                    "id": "b",
+                    "text": "Stack"
+                },
+                {
+                    "id": "c",
+                    "text": "Linked List"
+                },
+                {
+                    "id": "d",
+                    "text": "Tree"
+                }
+            ],
+            "correct_option": "b",
+            "explanation": "Stack follows LIFO principle where the last element added is the first one to be removed.",
+            "source": "Data Structures Basics",
+            "tags": [
+                "stack",
+                "data-structures",
+                "basics"
+            ]
+        },
+        {
+            "content": "What is the worst-case time complexity of QuickSort?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "medium",
+            "subject": "Data Structures & Algorithms",
+            "topic": "Sorting Algorithms",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "O(n log n)"
+                },
+                {
+                    "id": "b",
+                    "text": "O(n)"
+                },
+                {
+                    "id": "c",
+                    "text": "O(n²)"
+                },
+                {
+                    "id": "d",
+                    "text": "O(log n)"
+                }
+            ],
+            "correct_option": "c",
+            "explanation": "QuickSort has a worst-case time complexity of O(n²) when the pivot selection is poor (e.g., already sorted array with first element as pivot).",
+            "source": "Sorting Algorithms",
+            "tags": [
+                "quicksort",
+                "sorting",
+                "complexity"
+            ]
+        },
+        {
+            "content": "Which traversal method visits nodes in a Binary Search Tree in sorted order?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "hard",
+            "subject": "Data Structures & Algorithms",
+            "topic": "Trees",
+            "points": 10,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "Pre-order"
+                },
+                {
+                    "id": "b",
+                    "text": "In-order"
+                },
+                {
+                    "id": "c",
+                    "text": "Post-order"
+                },
+                {
+                    "id": "d",
+                    "text": "Level-order"
+                }
+            ],
+            "correct_option": "b",
+            "explanation": "In-order traversal (left, root, right) visits BST nodes in ascending sorted order.",
+            "source": "Tree Traversals",
+            "tags": [
+                "trees",
+                "traversal",
+                "bst"
+            ]
+        },
+        {
+            "content": "What is the space complexity of merge sort?",
+            "type": "mcq",
+            "category": "mcq",
+            "difficulty": "medium",
+            "subject": "Data Structures & Algorithms",
+            "topic": "Sorting Algorithms",
+            "points": 5,
+            "options": [
+                {
+                    "id": "a",
+                    "text": "O(1)"
+                },
+                {
+                    "id": "b",
+                    "text": "O(log n)"
+                },
+                {
+                    "id": "c",
+                    "text": "O(n)"
+                },
+                {
+                    "id": "d",
+                    "text": "O(n log n)"
+                }
+            ],
+            "correct_option": "c",
+            "explanation": "Merge sort requires O(n) additional space for the temporary arrays used during merging.",
+            "source": "Algorithm Analysis",
+            "tags": [
+                "merge-sort",
+                "space-complexity",
+                "sorting"
+            ]
+        }
+    ]
+}
