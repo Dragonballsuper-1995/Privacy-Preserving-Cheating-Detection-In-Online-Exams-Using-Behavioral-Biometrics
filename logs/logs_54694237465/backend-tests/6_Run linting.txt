@@ -1,0 +1,94 @@
+﻿2026-01-18T11:47:52.8560506Z ##[group]Run cd backend
+2026-01-18T11:47:52.8560805Z [36;1mcd backend[0m
+2026-01-18T11:47:52.8561027Z [36;1mpip install flake8 black isort[0m
+2026-01-18T11:47:52.8561419Z [36;1mflake8 app --count --select=E9,F63,F7,F82 --show-source --statistics[0m
+2026-01-18T11:47:52.8561802Z [36;1mblack --check app[0m
+2026-01-18T11:47:52.8562022Z [36;1misort --check-only app[0m
+2026-01-18T11:47:52.9025449Z shell: /usr/bin/bash -e {0}
+2026-01-18T11:47:52.9025771Z env:
+2026-01-18T11:47:52.9026232Z   PYTHON_VERSION: 3.12
+2026-01-18T11:47:52.9026494Z   NODE_VERSION: 18
+2026-01-18T11:47:52.9026823Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.12/x64
+2026-01-18T11:47:52.9027364Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.12/x64/lib/pkgconfig
+2026-01-18T11:47:52.9027905Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+2026-01-18T11:47:52.9028379Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+2026-01-18T11:47:52.9028866Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+2026-01-18T11:47:52.9029460Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.12/x64/lib
+2026-01-18T11:47:52.9029869Z ##[endgroup]
+2026-01-18T11:47:53.4250113Z Collecting flake8
+2026-01-18T11:47:53.5278468Z   Downloading flake8-7.3.0-py2.py3-none-any.whl.metadata (3.8 kB)
+2026-01-18T11:47:53.6214316Z Collecting black
+2026-01-18T11:47:53.6422417Z   Downloading black-26.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (88 kB)
+2026-01-18T11:47:53.7339162Z Collecting isort
+2026-01-18T11:47:53.7533334Z   Downloading isort-7.0.0-py3-none-any.whl.metadata (11 kB)
+2026-01-18T11:47:53.7845584Z Collecting mccabe<0.8.0,>=0.7.0 (from flake8)
+2026-01-18T11:47:53.8040882Z   Downloading mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+2026-01-18T11:47:53.8343972Z Collecting pycodestyle<2.15.0,>=2.14.0 (from flake8)
+2026-01-18T11:47:53.8540611Z   Downloading pycodestyle-2.14.0-py2.py3-none-any.whl.metadata (4.5 kB)
+2026-01-18T11:47:53.8869471Z Collecting pyflakes<3.5.0,>=3.4.0 (from flake8)
+2026-01-18T11:47:53.9067518Z   Downloading pyflakes-3.4.0-py2.py3-none-any.whl.metadata (3.5 kB)
+2026-01-18T11:47:53.9126628Z Requirement already satisfied: click>=8.0.0 in /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages (from black) (8.3.1)
+2026-01-18T11:47:53.9368696Z Collecting mypy-extensions>=0.4.3 (from black)
+2026-01-18T11:47:53.9562053Z   Downloading mypy_extensions-1.1.0-py3-none-any.whl.metadata (1.1 kB)
+2026-01-18T11:47:53.9600503Z Requirement already satisfied: packaging>=22.0 in /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages (from black) (25.0)
+2026-01-18T11:47:53.9869281Z Collecting pathspec>=1.0.0 (from black)
+2026-01-18T11:47:54.0064467Z   Downloading pathspec-1.0.3-py3-none-any.whl.metadata (13 kB)
+2026-01-18T11:47:54.0474035Z Collecting platformdirs>=2 (from black)
+2026-01-18T11:47:54.0669010Z   Downloading platformdirs-4.5.1-py3-none-any.whl.metadata (12 kB)
+2026-01-18T11:47:54.0981528Z Collecting pytokens>=0.3.0 (from black)
+2026-01-18T11:47:54.1173103Z   Downloading pytokens-0.3.0-py3-none-any.whl.metadata (2.0 kB)
+2026-01-18T11:47:54.1450337Z Downloading flake8-7.3.0-py2.py3-none-any.whl (57 kB)
+2026-01-18T11:47:54.1827089Z Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+2026-01-18T11:47:54.2033309Z Downloading pycodestyle-2.14.0-py2.py3-none-any.whl (31 kB)
+2026-01-18T11:47:54.2298574Z Downloading pyflakes-3.4.0-py2.py3-none-any.whl (63 kB)
+2026-01-18T11:47:54.2626843Z Downloading black-26.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.8 MB)
+2026-01-18T11:47:54.5391247Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 6.9 MB/s  0:00:00
+2026-01-18T11:47:54.5587932Z Downloading isort-7.0.0-py3-none-any.whl (94 kB)
+2026-01-18T11:47:54.5871572Z Downloading mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+2026-01-18T11:47:54.6082154Z Downloading pathspec-1.0.3-py3-none-any.whl (55 kB)
+2026-01-18T11:47:54.6320101Z Downloading platformdirs-4.5.1-py3-none-any.whl (18 kB)
+2026-01-18T11:47:54.6537453Z Downloading pytokens-0.3.0-py3-none-any.whl (12 kB)
+2026-01-18T11:47:54.9228055Z Installing collected packages: pytokens, pyflakes, pycodestyle, platformdirs, pathspec, mypy-extensions, mccabe, isort, flake8, black
+2026-01-18T11:47:55.3494423Z 
+2026-01-18T11:47:55.3603035Z Successfully installed black-26.1.0 flake8-7.3.0 isort-7.0.0 mccabe-0.7.0 mypy-extensions-1.1.0 pathspec-1.0.3 platformdirs-4.5.1 pycodestyle-2.14.0 pyflakes-3.4.0 pytokens-0.3.0
+2026-01-18T11:47:56.2224738Z 0
+2026-01-18T11:47:56.8745440Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/evaluation.py
+2026-01-18T11:47:56.9094809Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/events.py
+2026-01-18T11:47:56.9781671Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/dashboard.py
+2026-01-18T11:47:57.0580731Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/sessions.py
+2026-01-18T11:47:57.1071519Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/analysis.py
+2026-01-18T11:47:57.2401864Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/simulation.py
+2026-01-18T11:47:57.3127597Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/config.py
+2026-01-18T11:47:57.3528298Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/database.py
+2026-01-18T11:47:57.3640916Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/auth.py
+2026-01-18T11:47:57.3817139Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/websocket.py
+2026-01-18T11:47:57.5347924Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/logging.py
+2026-01-18T11:47:57.5444441Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/security.py
+2026-01-18T11:47:57.5773414Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/exams.py
+2026-01-18T11:47:57.6513829Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/editing_patterns.py
+2026-01-18T11:47:57.7187933Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/focus.py
+2026-01-18T11:47:57.7600312Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/hesitation.py
+2026-01-18T11:47:57.8069506Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/keystroke.py
+2026-01-18T11:47:57.9488704Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/paste.py
+2026-01-18T11:47:57.9995845Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/navigation.py
+2026-01-18T11:47:58.0786575Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/main.py
+2026-01-18T11:47:58.0911746Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/mouse_advanced.py
+2026-01-18T11:47:58.1027263Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/pipeline.py
+2026-01-18T11:47:58.3591519Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/temporal_analysis.py
+2026-01-18T11:47:58.3847023Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/adaptive_thresholds.py
+2026-01-18T11:47:58.4162286Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/embeddings.py
+2026-01-18T11:47:58.4867993Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/anomaly.py
+2026-01-18T11:47:58.6233522Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/evaluation.py
+2026-01-18T11:47:58.6372400Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/__init__.py
+2026-01-18T11:47:58.6729622Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/explainability.py
+2026-01-18T11:47:58.6732692Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/fusion.py
+2026-01-18T11:47:58.7994075Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/session.py
+2026-01-18T11:47:58.8550297Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/exam.py
+2026-01-18T11:47:58.8724711Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/simulation.py
+2026-01-18T11:47:58.8967846Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/event.py
+2026-01-18T11:47:59.0101230Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/utils/question_loader.py
+2026-01-18T11:47:59.0905769Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/services/export.py
+2026-01-18T11:47:59.0994319Z 
+2026-01-18T11:47:59.0995872Z Oh no! 💥 💔 💥
+2026-01-18T11:47:59.0996490Z 36 files would be reformatted, 5 files would be left unchanged.
+2026-01-18T11:47:59.1306170Z ##[error]Process completed with exit code 1.
