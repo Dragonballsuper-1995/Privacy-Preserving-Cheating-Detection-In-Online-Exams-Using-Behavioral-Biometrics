@@ -521,7 +521,7 @@ export default function AdminDashboard() {
                                                             {event.type}
                                                         </span>
                                                         <span className="text-xs text-gray-600 dark:text-gray-400 flex-1">
-                                                            {event.annotation || event.data?.type || '-'}
+                                                            {event.annotation || (event.data?.type as string) || '-'}
                                                         </span>
                                                         <span className="text-xs text-gray-400">
                                                             Q{event.question_id?.replace('q', '') || '?'}
