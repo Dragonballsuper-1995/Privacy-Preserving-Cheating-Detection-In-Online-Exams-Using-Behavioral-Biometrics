@@ -61,10 +61,10 @@ class TestIntegrationPipeline:
         assert features is not None
         feature_dict = features.to_dict()
         
-        # Check expected feature categories exist
-        assert "keystroke" in str(feature_dict).lower() or "avg_typing_speed" in feature_dict
-        assert "paste_count" in feature_dict
-        assert "blur_count" in feature_dict
+        # Check expected feature categories exist (nested structure)
+        assert "keystroke" in feature_dict or "paste" in feature_dict
+        assert "paste" in feature_dict
+        assert "focus" in feature_dict
         
         # Test anomaly detection (without trained model, should use heuristics)
         detector = BehaviorAnomalyDetector()
@@ -104,7 +104,7 @@ class TestIntegrationPipeline:
         
         features = hesitation.extract_hesitation_features(events)
         
-        assert features.long_pause_count >= 0
+        assert features.pause_count >= 0
         assert features.max_thinking_time > 2000  # Should detect long pause
     
     def test_paste_feature_extraction(self):
@@ -189,9 +189,9 @@ class TestIntegrationPipeline:
         features = extract_all_features(events, session_id="test")
         feature_dict = features.to_dict()
         
-        # Should have high paste count and long blur
-        assert feature_dict['paste_count'] >= 3
-        assert feature_dict['blur_count'] >= 1
+        # Should have high paste count and long blur (nested structure)
+        assert feature_dict.get('paste', {}).get('paste_count', 0) >= 3
+        assert feature_dict.get('focus', {}).get('blur_count', 0) >= 1
     
     def test_normal_behavior_detection(self):
         """Test detection of normal, honest student behavior."""
@@ -211,11 +211,11 @@ class TestIntegrationPipeline:
         features = extract_all_features(events, session_id="test")
         feature_dict = features.to_dict()
         
-        # Should show normal patterns
-        assert feature_dict['paste_count'] == 0
-        assert feature_dict['blur_count'] == 0
-        # Note: keystroke_count might not be exact match
-        assert feature_dict.get('keystroke_count', 0) >= 0 or 'total_keystrokes' in str(feature_dict)
+        # Should show normal patterns (nested structure)
+        assert feature_dict.get('paste', {}).get('paste_count', 0) == 0
+        assert feature_dict.get('focus', {}).get('blur_count', 0) == 0
+        # Note: keystroke_count in nested structure
+        assert 'keystroke' in feature_dict or 'paste' in feature_dict
 
 
 class TestDatabaseTransactions:

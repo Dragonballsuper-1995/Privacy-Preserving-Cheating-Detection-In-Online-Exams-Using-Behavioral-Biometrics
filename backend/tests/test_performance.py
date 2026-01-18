@@ -59,7 +59,7 @@ class TestPerformanceBenchmarks:
         times = []
         for _ in range(10):
             start = time.perf_counter()
-            features = extract_all_features(events)
+            features = extract_all_features(events, session_id=f"test_{_}")
             end = time.perf_counter()
             times.append((end - start) * 1000)  # Convert to ms
         
@@ -206,7 +206,7 @@ class TestPerformanceBenchmarks:
             events = generate_test_events(count)
             
             start = time.perf_counter()
-            features = extract_all_features(events)
+            features = extract_all_features(events, session_id=f"test_{count}")
             end = time.perf_counter()
             
             time_ms = (end - start) * 1000

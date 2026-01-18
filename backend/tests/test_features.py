@@ -80,7 +80,7 @@ class TestHesitationFeatures:
         
         features = hesitation.extract_hesitation_features(events)
         
-        assert features.long_pause_count >= 0  # Should detect pauses
+        assert features.pause_count >= 0  # Should detect pauses
         assert features.max_thinking_time >= 0
     
     def test_no_pauses(self):
@@ -92,7 +92,7 @@ class TestHesitationFeatures:
         
         features = hesitation.extract_hesitation_features(events)
         
-        assert features.long_pause_count == 0
+        assert features.pause_count == 0
         assert features.total_thinking_time >= 0
     
     def test_time_to_first_keystroke(self):
@@ -147,7 +147,7 @@ class TestPasteFeatures:
         features = paste.extract_paste_features(events)
         
         # Should detect paste shortly after regaining focus
-        assert features.paste_after_blur_count > 0 or features.paste_count > 0
+        assert features.paste_after_blur > 0 or features.paste_count > 0
 
 
 class TestFocusFeatures:
@@ -189,7 +189,7 @@ class TestFocusFeatures:
         
         features = focus.extract_focus_features(events)
         
-        assert features.extended_absence_count >= 0
+        assert features.extended_absences >= 0
         assert features.max_unfocused_duration >= 30000
 
 
