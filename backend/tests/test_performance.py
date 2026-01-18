@@ -60,7 +60,7 @@ class TestPerformanceBenchmarks:
         for _ in range(10):
             start = time.perf_counter()
             features = extract_all_features(events)
-           end = time.perf_counter()
+            end = time.perf_counter()
             times.append((end - start) * 1000)  # Convert to ms
         
         avg_time = statistics.mean(times)

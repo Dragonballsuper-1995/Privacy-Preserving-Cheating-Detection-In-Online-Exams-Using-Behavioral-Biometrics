@@ -1,0 +1,133 @@
+﻿2026-01-18T12:05:49.3356746Z ##[group]Run cd backend
+2026-01-18T12:05:49.3357026Z [36;1mcd backend[0m
+2026-01-18T12:05:49.3357235Z [36;1mpip install flake8 black isort[0m
+2026-01-18T12:05:49.3357995Z [36;1mflake8 app --count --select=E9,F63,F7,F82 --show-source --statistics || echo "Linting warnings found but continuing"[0m
+2026-01-18T12:05:49.3358660Z [36;1mblack --check app || echo "Black formatting issues found but continuing"[0m
+2026-01-18T12:05:49.3359158Z [36;1misort --check-only app || echo "Import sorting issues found but continuing"[0m
+2026-01-18T12:05:49.3699443Z shell: /usr/bin/bash -e {0}
+2026-01-18T12:05:49.3699688Z env:
+2026-01-18T12:05:49.3699864Z   PYTHON_VERSION: 3.12
+2026-01-18T12:05:49.3700082Z   NODE_VERSION: 18
+2026-01-18T12:05:49.3700346Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.12/x64
+2026-01-18T12:05:49.3700789Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.12/x64/lib/pkgconfig
+2026-01-18T12:05:49.3701240Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+2026-01-18T12:05:49.3701677Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+2026-01-18T12:05:49.3702066Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.12/x64
+2026-01-18T12:05:49.3702457Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.12/x64/lib
+2026-01-18T12:05:49.3702778Z ##[endgroup]
+2026-01-18T12:05:49.8434684Z Collecting flake8
+2026-01-18T12:05:49.9279804Z   Downloading flake8-7.3.0-py2.py3-none-any.whl.metadata (3.8 kB)
+2026-01-18T12:05:50.0053173Z Collecting black
+2026-01-18T12:05:50.0192343Z   Downloading black-26.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (88 kB)
+2026-01-18T12:05:50.0929889Z Collecting isort
+2026-01-18T12:05:50.1065302Z   Downloading isort-7.0.0-py3-none-any.whl.metadata (11 kB)
+2026-01-18T12:05:50.1261225Z Collecting mccabe<0.8.0,>=0.7.0 (from flake8)
+2026-01-18T12:05:50.1396731Z   Downloading mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+2026-01-18T12:05:50.1623506Z Collecting pycodestyle<2.15.0,>=2.14.0 (from flake8)
+2026-01-18T12:05:50.1760266Z   Downloading pycodestyle-2.14.0-py2.py3-none-any.whl.metadata (4.5 kB)
+2026-01-18T12:05:50.1991926Z Collecting pyflakes<3.5.0,>=3.4.0 (from flake8)
+2026-01-18T12:05:50.2126329Z   Downloading pyflakes-3.4.0-py2.py3-none-any.whl.metadata (3.5 kB)
+2026-01-18T12:05:50.2176175Z Requirement already satisfied: click>=8.0.0 in /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages (from black) (8.3.1)
+2026-01-18T12:05:50.2319742Z Collecting mypy-extensions>=0.4.3 (from black)
+2026-01-18T12:05:50.2452591Z   Downloading mypy_extensions-1.1.0-py3-none-any.whl.metadata (1.1 kB)
+2026-01-18T12:05:50.2485062Z Requirement already satisfied: packaging>=22.0 in /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages (from black) (25.0)
+2026-01-18T12:05:50.2652405Z Collecting pathspec>=1.0.0 (from black)
+2026-01-18T12:05:50.2788935Z   Downloading pathspec-1.0.3-py3-none-any.whl.metadata (13 kB)
+2026-01-18T12:05:50.3066594Z Collecting platformdirs>=2 (from black)
+2026-01-18T12:05:50.3202313Z   Downloading platformdirs-4.5.1-py3-none-any.whl.metadata (12 kB)
+2026-01-18T12:05:50.3412424Z Collecting pytokens>=0.3.0 (from black)
+2026-01-18T12:05:50.3546783Z   Downloading pytokens-0.3.0-py3-none-any.whl.metadata (2.0 kB)
+2026-01-18T12:05:50.3763590Z Downloading flake8-7.3.0-py2.py3-none-any.whl (57 kB)
+2026-01-18T12:05:50.3934137Z Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+2026-01-18T12:05:50.4086305Z Downloading pycodestyle-2.14.0-py2.py3-none-any.whl (31 kB)
+2026-01-18T12:05:50.4240887Z Downloading pyflakes-3.4.0-py2.py3-none-any.whl (63 kB)
+2026-01-18T12:05:50.4425826Z Downloading black-26.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.8 MB)
+2026-01-18T12:05:50.4894808Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 50.2 MB/s  0:00:00
+2026-01-18T12:05:50.5033481Z Downloading isort-7.0.0-py3-none-any.whl (94 kB)
+2026-01-18T12:05:50.5201433Z Downloading mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+2026-01-18T12:05:50.5354064Z Downloading pathspec-1.0.3-py3-none-any.whl (55 kB)
+2026-01-18T12:05:50.5508566Z Downloading platformdirs-4.5.1-py3-none-any.whl (18 kB)
+2026-01-18T12:05:50.5657931Z Downloading pytokens-0.3.0-py3-none-any.whl (12 kB)
+2026-01-18T12:05:50.8310700Z Installing collected packages: pytokens, pyflakes, pycodestyle, platformdirs, pathspec, mypy-extensions, mccabe, isort, flake8, black
+2026-01-18T12:05:51.2343975Z 
+2026-01-18T12:05:51.2452231Z Successfully installed black-26.1.0 flake8-7.3.0 isort-7.0.0 mccabe-0.7.0 mypy-extensions-1.1.0 pathspec-1.0.3 platformdirs-4.5.1 pycodestyle-2.14.0 pyflakes-3.4.0 pytokens-0.3.0
+2026-01-18T12:05:52.0163778Z 0
+2026-01-18T12:05:52.5780439Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/evaluation.py
+2026-01-18T12:05:52.6107280Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/events.py
+2026-01-18T12:05:52.6708754Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/dashboard.py
+2026-01-18T12:05:52.7505954Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/sessions.py
+2026-01-18T12:05:52.7902989Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/analysis.py
+2026-01-18T12:05:52.9163454Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/simulation.py
+2026-01-18T12:05:52.9851244Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/config.py
+2026-01-18T12:05:53.0162956Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/auth.py
+2026-01-18T12:05:53.0263384Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/database.py
+2026-01-18T12:05:53.0441565Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/websocket.py
+2026-01-18T12:05:53.1877505Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/logging.py
+2026-01-18T12:05:53.1976008Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/security.py
+2026-01-18T12:05:53.2368879Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/exams.py
+2026-01-18T12:05:53.3044687Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/editing_patterns.py
+2026-01-18T12:05:53.3449795Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/focus.py
+2026-01-18T12:05:53.3559957Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/hesitation.py
+2026-01-18T12:05:53.4449395Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/keystroke.py
+2026-01-18T12:05:53.5383196Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/paste.py
+2026-01-18T12:05:53.6100697Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/navigation.py
+2026-01-18T12:05:53.6827842Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/main.py
+2026-01-18T12:05:53.7091087Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/pipeline.py
+2026-01-18T12:05:53.7170502Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/mouse_advanced.py
+2026-01-18T12:05:53.9127238Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/temporal_analysis.py
+2026-01-18T12:05:53.9297022Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/adaptive_thresholds.py
+2026-01-18T12:05:54.0083853Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/embeddings.py
+2026-01-18T12:05:54.0651051Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/anomaly.py
+2026-01-18T12:05:54.1641133Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/evaluation.py
+2026-01-18T12:05:54.1756160Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/__init__.py
+2026-01-18T12:05:54.1963332Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/explainability.py
+2026-01-18T12:05:54.2486727Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/fusion.py
+2026-01-18T12:05:54.3341721Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/event.py
+2026-01-18T12:05:54.3576464Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/session.py
+2026-01-18T12:05:54.3659621Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/exam.py
+2026-01-18T12:05:54.4157596Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/simulation.py
+2026-01-18T12:05:54.5117999Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/utils/question_loader.py
+2026-01-18T12:05:54.5838551Z would reformat /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/services/export.py
+2026-01-18T12:05:54.5921384Z 
+2026-01-18T12:05:54.5921834Z Oh no! 💥 💔 💥
+2026-01-18T12:05:54.5924981Z 36 files would be reformatted, 5 files would be left unchanged.
+2026-01-18T12:05:54.6152082Z Black formatting issues found but continuing
+2026-01-18T12:05:54.7229729Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/main.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7258233Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/websocket.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7278642Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/dashboard.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7293657Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/sessions.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7318344Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/simulation.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7339546Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/analysis.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7378250Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/exams.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7391863Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/evaluation.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7405394Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/api/events.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7431718Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/event.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7446356Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/exam.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7459715Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/session.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7471702Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/models/__init__.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7489976Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/utils/question_loader.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7535295Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/services/export.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7567407Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/fusion.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7588227Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/embeddings.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7608948Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/simulation.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7625204Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/adaptive_thresholds.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7646220Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/explainability.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7666785Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/evaluation.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7688406Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/anomaly.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7699163Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/ml/__init__.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7727590Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/auth.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7741853Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/database.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7757978Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/logging.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7793830Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/security.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7806891Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/core/config.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7829876Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/keystroke.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7842482Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/hesitation.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7854761Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/focus.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7868028Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/paste.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7883351Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/editing_patterns.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7901154Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/temporal_analysis.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7924558Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/pipeline.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7943566Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/mouse_advanced.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7959870Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/navigation.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.7969356Z ERROR: /home/runner/work/Cryptography-Research-Paper/Cryptography-Research-Paper/backend/app/features/__init__.py Imports are incorrectly sorted and/or formatted.
+2026-01-18T12:05:54.8079533Z Import sorting issues found but continuing
