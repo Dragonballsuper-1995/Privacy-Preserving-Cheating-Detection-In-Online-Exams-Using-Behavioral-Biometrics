@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.features.pipeline import extract_all_features
 from app.ml.anomaly import BehaviorAnomalyDetector
-from app.ml.fusion import FusionModel
+from app.ml.fusion import RiskFusionModel
 
 
 def generate_test_events(count=100):
