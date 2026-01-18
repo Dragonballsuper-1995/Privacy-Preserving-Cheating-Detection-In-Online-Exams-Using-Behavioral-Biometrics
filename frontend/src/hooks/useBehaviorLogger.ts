@@ -31,12 +31,9 @@ export function useBehaviorLogger({
     apiEndpoint = 'http://localhost:8000/api/events/log',
 }: UseBehaviorLoggerOptions) {
     const eventsBuffer = useRef<BehaviorEvent[]>([]);
-    const lastFlush = useRef<number>(0);
-
-    // Lazy initialize lastFlush on first render
-    if (lastFlush.current === 0) {
-        lastFlush.current = Date.now();
-    }
+    // Use useMemo to compute timestamp once (satisfies React purity rules)
+    const initialTimestamp = useMemo(() => Date.now(), []);
+    const lastFlush = useRef<number>(initialTimestamp);
 
     // Flush events to backend
     const flushEvents = useCallback(async () => {
