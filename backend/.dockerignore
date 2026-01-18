@@ -16,14 +16,11 @@ pip-delete-this-directory.txt
 htmlcov/
 tests/
 
-# Data and Notebooks (Large files)
+# MyPy
+.mypy_cache/
+
+# Models and Large Data (Explicit ignore for Docker context)
+models/
 data/
 notebooks/
 scripts/
-
-# Git
-.git/
-.gitignore
-
-# MyPy
-.mypy_cache/
