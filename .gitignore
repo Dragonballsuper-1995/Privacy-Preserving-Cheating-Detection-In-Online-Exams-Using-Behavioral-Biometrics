@@ -6,6 +6,8 @@ __pycache__/
 .Python
 env/
 venv/
+
+# Environment
 .env
 
 # Project Data (Large Files)
@@ -13,8 +15,23 @@ backend/data/datasets/
 backend/data/event_logs/
 backend/data/training_manifest.json
 
-# Models
+# Models (including subdirectories)
 backend/models/*.pkl
+backend/models/**/*.pkl
+backend/models/**/*.joblib
+
+# Test Coverage
+backend/.coverage
+backend/htmlcov/
+backend/.pytest_cache/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Visualizations (generated files)
+backend/data/results/visualizations/*.png
+backend/data/results/visualizations/*.jpg
+backend/data/results/visualizations/*.svg
 
 # VS Code
 .vscode/
