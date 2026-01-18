@@ -3,7 +3,7 @@
  * Captures keystrokes, paste events, and focus/blur for cheating detection.
  */
 
-import { useCallback, useRef, useEffect, useMemo } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 
 export interface BehaviorEvent {
     session_id: string;
