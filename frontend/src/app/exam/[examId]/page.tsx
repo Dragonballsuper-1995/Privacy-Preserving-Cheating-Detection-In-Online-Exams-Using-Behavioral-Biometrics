@@ -78,6 +78,7 @@ export default function ExamPage({ params }: PageProps) {
         }, 1000);
 
         return () => clearInterval(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [examStarted, timeRemaining]);
 
     // Format time
