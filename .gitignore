@@ -6,9 +6,20 @@ __pycache__/
 .Python
 env/
 venv/
+backend/venv/
 
 # Environment
 .env
+
+# Node.js
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Project Data (Large Files)
 backend/data/datasets/
@@ -33,9 +44,14 @@ backend/data/results/visualizations/*.png
 backend/data/results/visualizations/*.jpg
 backend/data/results/visualizations/*.svg
 
-# VS Code
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # System
 .DS_Store
 Thumbs.db
+*.tmp
