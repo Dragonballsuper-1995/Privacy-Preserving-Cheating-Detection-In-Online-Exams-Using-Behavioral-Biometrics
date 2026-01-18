@@ -53,7 +53,7 @@ class TestPerformanceBenchmarks:
         events = generate_test_events(500)  # 500 events is realistic for one answer
         
         # Warm-up
-        extract_all_features(events)
+        extract_all_features(events, session_id="warmup")
         
         # Benchmark multiple runs
         times = []
@@ -80,7 +80,7 @@ class TestPerformanceBenchmarks:
         """Benchmark ML prediction speed (target: <500ms)."""
         # Generate features
         events = generate_test_events(200)
-        features = extract_all_features(events)
+        features = extract_all_features(events, session_id="test")
         feature_dict = features.to_dict()
         
         # Create detector
@@ -119,7 +119,7 @@ class TestPerformanceBenchmarks:
             start = time.perf_counter()
             
             # Complete pipeline
-            features = extract_all_features(events)
+            features = extract_all_features(events, session_id=f"session_{i}")
             feature_dict = features.to_dict()
             result = detector.detect(feature_dict, f"session_{i}")
             
@@ -146,7 +146,7 @@ class TestPerformanceBenchmarks:
         start = time.perf_counter()
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(extract_all_features, events) for events in events_list]
+            futures = [executor.submit(extract_all_features, events, f"session_{i}") for i, events in enumerate(events_list)]
             results = [f.result() for f in concurrent.futures.as_completed(futures)]
         
         end = time.perf_counter()
@@ -174,8 +174,8 @@ class TestPerformanceBenchmarks:
             # Process many events
             large_events = generate_test_events(10000)
             
-            for _ in range(10):
-                features = extract_all_features(large_events)
+            for i in range(10):
+                features = extract_all_features(large_events, session_id=f"test_{i}")
                 feature_dict = features.to_dict()
             
             # Measure after processing
