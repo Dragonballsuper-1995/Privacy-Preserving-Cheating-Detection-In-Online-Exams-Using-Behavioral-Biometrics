@@ -37,7 +37,7 @@ interface DashboardData {
 interface TimelineEvent {
     timestamp: number;
     type: string;
-    data: Record<string, any>;
+    data: Record<string, unknown>;
     question_id: string;
     annotation?: string;
     severity?: string;
@@ -53,10 +53,10 @@ interface SessionDetails {
     is_flagged: boolean;
     flag_reasons: string[];
     features?: {
-        keystroke: Record<string, any>;
-        hesitation: Record<string, any>;
-        paste: Record<string, any>;
-        focus: Record<string, any>;
+        keystroke: Record<string, unknown>;
+        hesitation: Record<string, unknown>;
+        paste: Record<string, unknown>;
+        focus: Record<string, unknown>;
     };
 }
 
@@ -541,7 +541,7 @@ export default function AdminDashboard() {
                                                         {category} Features
                                                     </h3>
                                                     <div className="grid grid-cols-2 gap-2 text-sm">
-                                                        {Object.entries(features as Record<string, any>).map(([key, value]) => (
+                                                        {Object.entries(features as Record<string, unknown>).map(([key, value]) => (
                                                             <div key={key} className="flex justify-between">
                                                                 <span className="text-gray-600 dark:text-gray-400">
                                                                     {key.replace(/_/g, ' ')}
