@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     
     # CORS
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: List[str] = ["http://localhost:3000", "http://192.168.89.1:3000", "https://6vjfqk0n-3000.inc1.devtunnels.ms"]
     allowed_origins: str = "http://localhost:3000"  # For compatibility
     
     # ML Model Settings

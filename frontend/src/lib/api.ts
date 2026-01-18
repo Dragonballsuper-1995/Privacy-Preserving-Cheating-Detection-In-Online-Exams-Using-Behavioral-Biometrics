@@ -2,7 +2,31 @@
  * API client for backend communication
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Smart API URL detection based on how the frontend is accessed
+function getApiBase(): string {
+    // If we're in the browser
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+
+        // If accessing via VS Code tunnel
+        if (hostname.includes('devtunnels.ms')) {
+            return 'https://6vjfqk0n-8000.inc1.devtunnels.ms';
+        }
+
+        // If accessing via network IP
+        if (hostname === '192.168.89.1' || hostname.startsWith('192.168.')) {
+            return 'http://192.168.89.1:8000';
+        }
+
+        // Default to localhost
+        return 'http://localhost:8000';
+    }
+
+    // Server-side rendering fallback
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+}
+
+const API_BASE = getApiBase();
 
 export interface Exam {
     id: string;
