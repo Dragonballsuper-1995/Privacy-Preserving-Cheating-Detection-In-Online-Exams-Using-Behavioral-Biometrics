@@ -31,9 +31,12 @@ export function useBehaviorLogger({
     apiEndpoint = 'http://localhost:8000/api/events/log',
 }: UseBehaviorLoggerOptions) {
     const eventsBuffer = useRef<BehaviorEvent[]>([]);
-    // Use useMemo to compute timestamp once (satisfies React purity rules)
-    const initialTimestamp = useMemo(() => Date.now(), []);
-    const lastFlush = useRef<number>(initialTimestamp);
+    const lastFlush = useRef<number>(0);
+
+    // Initialize timestamp on mount (safe side effect)
+    useEffect(() => {
+        lastFlush.current = Date.now();
+    }, []);
 
     // Flush events to backend
     const flushEvents = useCallback(async () => {
