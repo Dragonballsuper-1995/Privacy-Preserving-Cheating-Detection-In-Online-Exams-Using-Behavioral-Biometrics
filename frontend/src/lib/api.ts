@@ -4,7 +4,12 @@
 
 // Smart API URL detection based on how the frontend is accessed
 function getApiBase(): string {
-    // If we're in the browser
+    // 1. In production, always trust the environment variable
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL;
+    }
+
+    // 2. If we're in the browser (Development), check for dynamic overrides
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
 
@@ -17,12 +22,9 @@ function getApiBase(): string {
         if (hostname === '192.168.89.1' || hostname.startsWith('192.168.')) {
             return 'http://192.168.89.1:8000';
         }
-
-        // Default to localhost
-        return 'http://localhost:8000';
     }
 
-    // Server-side rendering fallback
+    // 3. Fallback (Server-side or localhost dev)
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 }
 
