@@ -8,7 +8,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Smart API URL detection - same logic as lib/api.ts
+function getApiBase(): string {
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        if (hostname.includes('onrender.com')) {
+            return 'https://cheating-detector-backend.onrender.com';
+        }
+        if (hostname.includes('devtunnels.ms')) {
+            return 'https://6vjfqk0n-8000.inc1.devtunnels.ms';
+        }
+        if (hostname === '192.168.89.1' || hostname.startsWith('192.168.')) {
+            return 'http://192.168.89.1:8000';
+        }
+    }
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+}
+
+const API_BASE = getApiBase();
 
 interface SessionScore {
     typing: number;
