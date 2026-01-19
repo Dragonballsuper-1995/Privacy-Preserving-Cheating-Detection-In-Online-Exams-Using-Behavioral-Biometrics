@@ -4,27 +4,27 @@
 
 // Smart API URL detection based on how the frontend is accessed
 function getApiBase(): string {
-    // 1. In production, always trust the environment variable
-    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_API_URL) {
-        return process.env.NEXT_PUBLIC_API_URL;
-    }
-
-    // 2. If we're in the browser (Development), check for dynamic overrides
+    // If we're in the browser, detect the environment from the URL
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
 
-        // If accessing via VS Code tunnel
+        // PRODUCTION: Render deployment
+        if (hostname.includes('onrender.com')) {
+            return 'https://cheating-detector-backend.onrender.com';
+        }
+
+        // DEVELOPMENT: VS Code tunnel
         if (hostname.includes('devtunnels.ms')) {
             return 'https://6vjfqk0n-8000.inc1.devtunnels.ms';
         }
 
-        // If accessing via network IP
+        // DEVELOPMENT: Network IP access
         if (hostname === '192.168.89.1' || hostname.startsWith('192.168.')) {
             return 'http://192.168.89.1:8000';
         }
     }
 
-    // 3. Fallback (Server-side or localhost dev)
+    // Fallback (Server-side rendering or localhost dev)
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 }
 
