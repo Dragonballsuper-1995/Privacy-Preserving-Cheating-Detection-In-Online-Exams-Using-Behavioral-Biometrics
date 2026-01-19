@@ -1,15 +1,13 @@
-services:
-  # PostgreSQL Database
-  - type: pserv
-    name: cheating-detector-db
-    env: docker
+databases:
+  - name: cheating-detector-db
+    databaseName: cheating_detector
     plan: free
-    ipAllowList: []
 
+services:
   # Backend API (FastAPI)
   - type: web
     name: cheating-detector-backend
-    env: docker
+    runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
@@ -35,7 +33,7 @@ services:
   # Frontend (Next.js)
   - type: web
     name: cheating-detector-frontend
-    env: docker
+    runtime: docker
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
     plan: free
@@ -47,9 +45,3 @@ services:
           envVarKey: RENDER_EXTERNAL_URL
       - key: NODE_ENV
         value: production
-
-databases:
-  - name: cheating-detector-db
-    databaseName: cheating_detector
-    user: postgres
-    plan: free
