@@ -20,7 +20,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        sync: false
+        value: "http://localhost:3000,https://cheating-detector-frontend.onrender.com"
       - key: SIMILARITY_THRESHOLD
         value: "0.85"
       - key: RISK_THRESHOLD
