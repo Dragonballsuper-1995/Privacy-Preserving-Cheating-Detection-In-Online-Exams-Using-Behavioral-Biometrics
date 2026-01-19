@@ -1,0 +1,55 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: cheating-detector-db
+    env: docker
+    plan: free
+    ipAllowList: []
+
+  # Backend API (FastAPI)
+  - type: web
+    name: cheating-detector-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cheating-detector-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SIMILARITY_THRESHOLD
+        value: "0.85"
+      - key: RISK_THRESHOLD
+        value: "0.75"
+      - key: MIN_PAUSE_DURATION
+        value: "2000"
+      - key: MAX_TYPING_SPEED
+        value: "150"
+
+  # Frontend (Next.js)
+  - type: web
+    name: cheating-detector-frontend
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: cheating-detector-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: cheating-detector-db
+    databaseName: cheating_detector
+    user: postgres
+    plan: free
