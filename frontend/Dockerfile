@@ -43,6 +43,9 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
 COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache
@@ -59,6 +62,10 @@ USER nextjs
 EXPOSE 3000
 
 ENV PORT=3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
 
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/next-config-js/output
