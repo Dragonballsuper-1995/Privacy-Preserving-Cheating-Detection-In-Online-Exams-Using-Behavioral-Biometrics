@@ -57,14 +57,14 @@ class Question(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     exam_id = Column(String(36), ForeignKey("exams.id"), nullable=False)
-    type = Column(Enum(QuestionType), nullable=False)
+    type = Column(Enum(QuestionType, native_enum=False), nullable=False)
     content = Column(Text, nullable=False)
     points = Column(Integer, default=10)
     order = Column(Integer, default=0)
     
     # New metadata fields
-    category = Column(Enum(QuestionType))  # Same as type, for filtering
-    difficulty = Column(Enum(Difficulty), default=Difficulty.MEDIUM)
+    category = Column(Enum(QuestionType, native_enum=False))  # Same as type, for filtering
+    difficulty = Column(Enum(Difficulty, native_enum=False), default=Difficulty.MEDIUM)
     subject = Column(String(100))
     topic = Column(String(100))
     tags = Column(JSON)  # List of strings

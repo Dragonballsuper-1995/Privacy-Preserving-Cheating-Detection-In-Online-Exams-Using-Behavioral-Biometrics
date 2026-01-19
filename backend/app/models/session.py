@@ -26,7 +26,7 @@ class Session(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     exam_id = Column(String(36), ForeignKey("exams.id"), nullable=False)
     student_id = Column(String(100), nullable=False)
-    status = Column(Enum(SessionStatus), default=SessionStatus.NOT_STARTED)
+    status = Column(Enum(SessionStatus, native_enum=False), default=SessionStatus.NOT_STARTED)
     started_at = Column(DateTime)
     submitted_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
