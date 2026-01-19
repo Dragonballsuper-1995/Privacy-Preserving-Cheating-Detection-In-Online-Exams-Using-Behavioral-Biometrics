@@ -2,8 +2,9 @@
 Application configuration using Pydantic Settings
 """
 
-from pydantic_settings import BaseSettings
-from typing import List
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+from typing import List, Union
 import os
 
 
@@ -23,8 +24,15 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     
     # CORS
-    cors_origins: List[str] = ["http://localhost:3000", "http://192.168.89.1:3000", "https://6vjfqk0n-3000.inc1.devtunnels.ms"]
+    cors_origins: Union[List[str], str] = ["http://localhost:3000"]
     allowed_origins: str = "http://localhost:3000"  # For compatibility
+    
+    @field_validator('cors_origins', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(',')]
+        return v
     
     # ML Model Settings
     similarity_threshold: float = 0.85
