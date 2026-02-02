@@ -1,186 +1,168 @@
-# Research Paper Support Guide
+# Research Guide
 
-This document provides guidance for writing a research paper based on the Cheating Detection System.
-
----
-
-## Suggested Paper Structure
-
-### 1. Abstract
-- Problem: Online exam proctoring often requires invasive camera monitoring
-- Solution: Privacy-preserving behavioral biometrics approach
-- Key Results: Report accuracy, precision, recall from evaluation metrics
-
-### 2. Introduction
-- Growth of online education and exams
-- Privacy concerns with traditional proctoring
-- Research questions:
-  - RQ1: Can behavioral signals alone detect cheating?
-  - RQ2: What behavioral patterns indicate cheating?
-  - RQ3: How do different feature types contribute to detection?
-
-### 3. Related Work
-- Traditional proctoring systems (ProctorU, Examity)
-- Keystroke dynamics research
-- Anomaly detection in education
-- Answer similarity/plagiarism detection
-
-### 4. Methodology
-
-#### 4.1 System Architecture
-Reference the architecture diagram in README.md
-
-#### 4.2 Feature Extraction
-| Category | Features |
-|----------|----------|
-| Keystroke | Inter-key delay, hold time, typing speed, rhythm variance |
-| Hesitation | Pause count, duration, time to first key |
-| Paste | Paste count, length, correlation with tab switching |
-| Focus | Blur count, unfocused time, extended absences |
-
-#### 4.3 Machine Learning Pipeline
-1. **Anomaly Detection**: Isolation Forest trained on honest sessions
-2. **Answer Similarity**: Sentence embeddings (all-MiniLM-L6-v2)
-3. **Risk Fusion**: Weighted combination with optional Random Forest
-
-#### 4.4 Risk Score Formula
-```
-Score = 0.35 × behavioral + 0.35 × anomaly + 0.30 × similarity
-```
-
-### 5. Experiments
-
-#### 5.1 Dataset
-- Generated using simulation mode
-- Parameters: honest_count, cheater_count
-- Behavioral differences between honest/cheating simulations
-
-#### 5.2 Evaluation Metrics
-Use the evaluation API to get:
-- Accuracy, Precision, Recall, F1 Score
-- AUC-ROC
-- Confusion Matrix
-
-#### 5.3 Threshold Analysis
-Use `/api/evaluation/optimal-threshold` to find best threshold
-
-### 6. Results
-Include:
-- Classification performance table
-- Feature importance analysis
-- Threshold sensitivity analysis
-- Comparison with baseline methods
-
-### 7. Discussion
-- Strengths: Privacy-preserving, explainable, extensible
-- Limitations: Simulated data, single-session training
-- Future work: Real student data, multi-session patterns
-
-### 8. Conclusion
-Summarize contributions and findings
+> Theoretical approach and methodology documentation
 
 ---
 
-## Data Collection Notes
+## Core Premise
 
-### Simulated Data
-The system can generate synthetic data for initial experiments:
-```bash
-POST /api/simulation/generate-training-data
-{"honest_count": 100, "cheater_count": 50}
-```
-
-### Real Data Collection (IRB Approval Required)
-If collecting real data:
-1. Obtain IRB approval
-2. Get informed consent
-3. Anonymize student IDs
-4. Collect during controlled exams
-5. Have proctors label sessions
+This system is based on the hypothesis that **behavioral biometrics can distinguish between organic exam-taking and copying/cheating behavior** without invasive monitoring (webcam, microphone, screen capture).
 
 ---
 
-## Evaluation Workflow
+## Theoretical Foundations
 
-1. **Generate Data**:
-```bash
-curl -X POST http://localhost:8000/api/simulation/generate-training-data \
-  -H "Content-Type: application/json" \
-  -d '{"honest_count": 100, "cheater_count": 40}'
-```
+### 1. Keystroke Dynamics
 
-2. **Train Models**:
-```bash
-curl -X POST http://localhost:8000/api/simulation/train-models
-```
+> The characteristic typing rhythm of individuals is measurable and distinctive.
 
-3. **Evaluate**:
-```bash
-curl http://localhost:8000/api/evaluation/evaluate -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"threshold": 0.75}'
-```
+**Key Features Extracted** (from `app/features/keystroke.py`):
+- Inter-key delay (time between key presses)
+- Hold time (key press duration)
+- Typing speed (WPM)
+- Standard deviation of timing patterns
 
-4. **Find Optimal Threshold**:
-```bash
-curl http://localhost:8000/api/evaluation/optimal-threshold
-```
+**Cheating Indicators**:
+- Abnormally fast typing (copy-paste velocity)
+- Lack of timing variance (machine-like)
+- Missing think-type-correct cycles
 
-5. **Generate Report**:
-```bash
-curl http://localhost:8000/api/evaluation/report
-```
+**Reference**: Killourhy & Maxion, "Comparing Anomaly-Detection Algorithms for Keystroke Dynamics" (2009)
 
 ---
 
-## Tables for Paper
+### 2. Hesitation Patterns
 
-### Table 1: System Features
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Frontend | Next.js 14 | Exam interface |
-| Backend | FastAPI | API & ML pipeline |
-| Database | SQLite/PostgreSQL | Session storage |
-| ML | scikit-learn | Anomaly detection |
-| NLP | sentence-transformers | Answer similarity |
+> Natural writing involves pauses for thought; copied content does not.
 
-### Table 2: Feature Categories
-| Category | Count | Key Features |
-|----------|-------|--------------|
-| Keystroke | 8 | Inter-key delay, speed, rhythm |
-| Hesitation | 6 | Pause count, duration |
-| Paste | 5 | Count, length, timing |
-| Focus | 5 | Blur count, absence time |
+**Key Features Extracted** (from `app/features/hesitation.py`):
+- Pause count (pauses > threshold)
+- Maximum pause duration
+- Pause-to-keystroke ratio
+- Backspace/correction patterns
 
-### Table 3: Comparison with Related Work
-| System | Camera | Audio | Keystroke | Similarity | Privacy |
-|--------|--------|-------|-----------|------------|---------|
-| ProctorU | ✓ | ✓ | ✗ | ✗ | Low |
-| Examity | ✓ | ✓ | ✗ | ✗ | Low |
-| Turnitin | ✗ | ✗ | ✗ | ✓ | Medium |
-| **Ours** | ✗ | ✗ | ✓ | ✓ | **High** |
+**Cheating Indicators**:
+- Few natural pauses (direct pasting)
+- Unusually long pauses (searching external sources)
+- Low correction rate (copied content doesn't need editing)
 
 ---
 
-## Citation
+### 3. Paste Behavior Analysis
 
-```bibtex
-@software{cheating_detection_2024,
-  title = {Privacy-Preserving AI-Based Cheating Detection 
-           in Online Exams Using Behavioral Biometrics 
-           and Answer Similarity},
-  author = {Your Name},
-  year = {2024},
-  institution = {Your University},
-  type = {Research Software}
+> Excessive pasting of text indicates external source usage.
+
+**Key Features Extracted** (from `app/features/paste.py`):
+- Paste event count
+- Total paste content length
+- Average paste size
+- Paste frequency
+
+**Cheating Indicators**:
+- Multiple large pastes
+- Paste content exceeding expected answer length
+- Pastes occurring without preceding typing
+
+---
+
+### 4. Focus Patterns
+
+> Tab switching and window blur events suggest reference lookup.
+
+**Key Features Extracted** (from `app/features/focus.py`):
+- Blur count
+- Total unfocused time
+- Average blur duration
+- Blur frequency
+
+**Cheating Indicators**:
+- Frequent tab switching
+- Long periods of unfocus during questions
+- Blur-to-typing correlation
+
+---
+
+## ML Approach
+
+### Anomaly Detection (Isolation Forest)
+
+**Implemented in**: `app/ml/anomaly.py`
+
+```python
+model = IsolationForest(contamination=0.1)
+```
+
+**Why Isolation Forest**:
+- Unsupervised (no labeled cheating data needed initially)
+- Effective for high-dimensional behavioral features
+- Returns interpretable anomaly scores
+
+**Feature Vector**:
+```
+[typing_speed, inter_key_delay_std, pause_count, max_pause,
+ paste_count, paste_length, blur_count, unfocused_time]
+```
+
+### Risk Fusion (Weighted Ensemble)
+
+**Implemented in**: `app/ml/fusion.py`
+
+```python
+DEFAULT_WEIGHTS = {
+    "behavioral": 0.35,
+    "anomaly": 0.35,
+    "similarity": 0.30
 }
 ```
 
+**Why Weighted Fusion**:
+- Combines multiple signal types
+- Tunable weights based on domain knowledge
+- Interpretable final score
+
 ---
 
-## Helpful Resources
+## Risk Thresholds
 
-- [Keystroke Dynamics Research](https://www.sciencedirect.com/topics/computer-science/keystroke-dynamics)
-- [Isolation Forest Paper](https://cs.nju.edu.cn/zhouzh/zhouzh.files/publication/icdm08b.pdf)
-- [Sentence-BERT Paper](https://arxiv.org/abs/1908.10084)
-- [CMU Keystroke Dataset](https://www.cs.cmu.edu/~keystroke/)
+From `app/core/config.py`:
+
+```python
+risk_threshold: float = 0.50      # Flagging threshold (lowered from 0.75)
+similarity_threshold: float = 0.85 # Answer similarity threshold
+min_pause_duration: int = 2000     # 2 seconds
+max_typing_speed: int = 150        # WPM
+```
+
+---
+
+## Flagging Logic
+
+From `app/features/pipeline.py`:
+
+Sessions are flagged when:
+1. Overall score > `risk_threshold`
+2. OR any of these conditions:
+   - Paste score > 0.8 ("Excessive pasting")
+   - Focus score > 0.7 ("Extended unfocused time")
+   - Typing score pattern matches copy behavior
+   - Long pauses followed by rapid input
+
+---
+
+## Privacy-Preserving Design
+
+| What IS Captured | What IS NOT Captured |
+|-----------------|---------------------|
+| Key codes (a-z, 0-9) | Actual text content |
+| Timing information | Webcam images |
+| Paste content length | Audio recordings |
+| Window focus state | Screen content |
+
+---
+
+## Limitations
+
+1. **Baseline dependency**: Anomaly detection improves with more honest sessions
+2. **Typing style variance**: Some honest students type unusually
+3. **No content analysis**: Can't detect if pasted code is original or plagiarized
+4. **Browser dependency**: Focus events depend on browser visibility API

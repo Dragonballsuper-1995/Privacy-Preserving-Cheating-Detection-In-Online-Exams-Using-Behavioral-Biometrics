@@ -1,364 +1,175 @@
 # Testing Guide
 
-Comprehensive testing guide for the Cheating Detection System.
-
-## Table of Contents
-
-1. [Quick Start](#quick-start)
-2. [Test Types](#test-types)
-3. [Running Tests](#running-tests)
-4. [Frontend Testing](#frontend-testing)
-5. [Backend Testing](#backend-testing)
-6. [Test Results](#test-results)
+> Test suite documentation for the Cheating Detection System
 
 ---
 
-## Quick Start
+## Test Framework
 
-### Prerequisites
-
-```bash
-# Backend
-cd backend
-pip install -r requirements.txt
-pip install -r tests/requirements-test.txt
-
-# Frontend
-cd frontend
-npm install
-```
-
-### Run All Tests
-
-```bash
-# Backend - All tests
-cd backend
-pytest
-
-# Frontend - All tests
-cd frontend
-npm test
-
-# Run both with coverage
-./run_all_tests.sh  # or run_all_tests.bat on Windows
-```
+- **Framework**: pytest 7.4+
+- **HTTP Client**: httpx (for API tests)
+- **Location**: `backend/tests/`
+- **Requirements**: `backend/tests/requirements-test.txt`
 
 ---
 
-## Test Types
+## Test Files
 
-### 1. **Unit Tests**
-- Test individual functions and classes
-- Fast execution, isolated
-- Located in `backend/tests/test_*.py`
-
-### 2. **Integration Tests**
-- Test component interactions
-- Database, API endpoints
-- File: `backend/tests/test_integration.py`
-
-### 3. **Performance Tests**
-- Load testing, stress testing
-- Response time validation
-- File: `backend/tests/test_performance.py`
-
-### 4. **Feature Tests**
-- Test ML feature extraction
-- Behavioral analysis pipelines
-- File: `backend/tests/test_features.py`
-
-### 5. **Smoke Tests**
-- Quick sanity checks
-- Critical path validation
-- File: `backend/tests/test_smoke.py`
+| File | Category | Description |
+|------|----------|-------------|
+| `test_smoke.py` | Smoke | Basic infrastructure validation |
+| `test_integration.py` | Integration | Complete ML pipeline tests |
+| `test_features.py` | Unit | Feature extraction module tests |
+| `test_performance.py` | Performance | Timing and throughput tests |
+| `test_load.py` | Load | Stress testing endpoints |
 
 ---
 
 ## Running Tests
 
-### Backend Tests
+### Prerequisites
 
-**Run all tests:**
 ```bash
 cd backend
-pytest
+pip install -r tests/requirements-test.txt
 ```
 
-**Run specific test file:**
+### Run All Tests
+
 ```bash
-pytest tests/test_features.py
+pytest tests/ -v
 ```
 
-**Run with coverage:**
-```bash
-pytest --cov=app --cov-report=html
-# View coverage: open htmlcov/index.html
-```
+### Run Specific Test Categories
 
-**Run by marker:**
 ```bash
-# Unit tests only
-pytest -m unit
+# Smoke tests only (fast)
+pytest tests/test_smoke.py -v
 
 # Integration tests
-pytest -m integration
+pytest tests/test_integration.py -v
 
-# Performance tests
-pytest -m performance
+# With coverage report
+pytest tests/ --cov=app --cov-report=html
 ```
 
-**Verbose output:**
-```bash
-pytest -v
-```
+### Run Single Test
 
-**Stop on first failure:**
 ```bash
-pytest -x
-```
-
-### Frontend Tests
-
-**Run all tests:**
-```bash
-cd frontend
-npm test
-```
-
-**Run with coverage:**
-```bash
-npm run test:coverage
-```
-
-**Run specific test:**
-```bash
-npm test -- QuestionRenderer.test.tsx
-```
-
-**Watch mode:**
-```bash
-npm test -- --watch
+pytest tests/test_smoke.py::test_imports -v
 ```
 
 ---
 
-## Frontend Testing
+## Current Test Coverage
 
-### Component Tests
+### Smoke Tests (`test_smoke.py`)
 
-Test React components in isolation:
+| Test | What It Validates |
+|------|-------------------|
+| `test_imports` | All feature modules can be imported |
+| `test_keystroke_dataclass` | KeystrokeFeatures dataclass creation and `to_dict()` |
+| `test_session_features_dataclass` | SessionFeatures dataclass creation |
+| `test_extract_all_features_empty` | Pipeline handles empty events gracefully |
+| `test_simple_calculation` | pytest infrastructure works |
 
-```typescript
-// Example: Testing QuestionRenderer
-import { render, screen } from '@testing-library/react';
-import { QuestionRenderer } from '@/components/QuestionRenderer';
+### Integration Tests (`test_integration.py`)
 
-test('renders MCQ question', () => {
-  const question = {
-    id: '1',
-    type: 'mcq',
-    content: 'What is 2+2?',
-    options: [
-      { id: 'a', text: '3' },
-      { id: 'b', text: '4' }
-    ]
-  };
-  
-  render(<QuestionRenderer question={question} answer="" onAnswerChange={() => {}} />);
-  expect(screen.getByText('What is 2+2?')).toBeInTheDocument();
-});
-```
-
-### Quick Frontend Tests
-
-**Test the exam flow:**
-1. Start dev server: `npm run dev`
-2. Open http://localhost:3000
-3. Click on "Python Fundamentals Assessment"
-4. Click "Start Exam"
-5. Answer questions
-6. Submit exam
-7. Verify completion page shows
-
-**Test behavioral tracking:**
-- Type in text areas (keystroke logging)
-- Copy/paste text (paste detection)
-- Switch tabs (focus/blur tracking)
-- Check browser console for event logs
-
-**Test category tabs:**
-- Verify MCQ, Coding, Subjective tabs appear
-- Check question counts are correct
-- Test navigation between categories
-- Verify difficulty badges display
+| Test | What It Validates |
+|------|-------------------|
+| `test_event_to_features_to_prediction` | Complete pipeline: events → features → ML prediction |
+| `test_keystroke_feature_extraction` | Keystroke features extracted correctly |
+| `test_hesitation_feature_extraction` | Pause detection works |
+| `test_paste_feature_extraction` | Paste count and length tracking |
+| `test_focus_feature_extraction` | Blur/focus event handling |
+| `test_empty_events_handling` | Empty input doesn't crash |
+| `test_malformed_events_handling` | Malformed events handled gracefully |
+| `test_feature_dict_serialization` | Features are JSON-serializable |
+| `test_high_risk_behavior_detection` | Suspicious behavior flagged |
+| `test_normal_behavior_detection` | Normal behavior not flagged |
 
 ---
 
-## Backend Testing
+## Test Data Format
 
-### API Testing
+Tests use in-memory event dictionaries:
 
-**Test with curl:**
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# List exams
-curl http://localhost:8000/api/exams/list
-
-# Get categories
-curl http://localhost:8000/api/exams/categories
-
-# Search questions
-curl "http://localhost:8000/api/exams/questions/search?category=mcq&difficulty=easy"
-```
-
-**Test with Python:**
 ```python
-import requests
+events = [
+    {
+        "event_type": "keydown",
+        "timestamp": 1000,
+        "data": {"key": "a", "hold_time": 100}
+    },
+    {
+        "event_type": "paste",
+        "timestamp": 2000,
+        "data": {"length": 50}
+    },
+    {
+        "event_type": "blur",
+        "timestamp": 3000,
+        "data": {}
+    }
+]
 
-# Test exam endpoint
-response = requests.get('http://localhost:8000/api/exams/demo-exam-1')
-print(response.json())
-
-# Test question search
-response = requests.get('http://localhost:8000/api/exams/questions/search', 
-                       params={'category': 'coding', 'difficulty': 'medium'})
-print(response.json())
-```
-
-### Feature Extraction Testing
-
-```bash
-# Test keystroke analysis
-pytest tests/test_features.py::test_keystroke_features
-
-# Test behavioral scoring
-pytest tests/test_features.py::test_behavioral_scoring
-
-# Test question loader
-pytest tests/test_features.py::test_question_loader
-```
-
-### Performance Testing
-
-```bash
-# Load test
-pytest tests/test_load.py -v
-
-# Performance benchmarks
-pytest tests/test_performance.py --benchmark
+features = extract_all_features(events, session_id="test")
 ```
 
 ---
 
-## Test Results
+## Adding New Tests
 
-### Backend Test Summary
+### Feature Extraction Test
 
-**Total Tests**: 45+
-- ✅ Unit Tests: 25 (100% pass)
-- ✅ Integration Tests: 12 (100% pass)
-- ✅ Feature Tests: 8 (100% pass)
-
-**Code Coverage**: 85%+
-- Core features: 90%
-- API endpoints: 88%
-- ML models: 80%
-
-**Performance**:
-- API response time: <100ms (avg)
-- Feature extraction: <50ms per event
-- Analysis completion: <2s per session
-
-### Frontend Test Summary
-
-**Component Coverage**: 75%+
-- QuestionRenderer: ✅ All question types tested
-- CategoryTabs: ✅ Navigation and progress tested
-- DifficultyBadge: ✅ Visual rendering tested
-
-**Integration**:
-- ✅ Exam flow complete
-- ✅ Event tracking functional
-- ✅ API integration working
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**Tests fail to connect to database:**
-```bash
-# Initialize test database
-cd backend
-python -c "from app.core.database import init_db; init_db()"
+```python
+def test_new_feature_extraction():
+    """Test new feature extraction logic."""
+    events = [
+        {"event_type": "keydown", "timestamp": 1000, "data": {"key": "x"}}
+    ]
+    
+    features = extract_all_features(events, session_id="test")
+    feature_dict = features.to_dict()
+    
+    assert "your_feature" in feature_dict
+    assert feature_dict["your_feature"] == expected_value
 ```
 
-**Import errors:**
-```bash
-# Ensure you're in the right directory
-cd backend  # for backend tests
-cd frontend  # for frontend tests
+### API Endpoint Test (with FastAPI TestClient)
 
-# Reinstall dependencies
-pip install -r requirements.txt  # backend
-npm install  # frontend
-```
+```python
+from fastapi.testclient import TestClient
+from app.main import app
 
-**Port already in use:**
-```bash
-# Kill process on port 8000
-# Windows:
-netstat -ano | findstr :8000
-taskkill /PID <PID> /F
+client = TestClient(app)
 
-# Linux/Mac:
-lsof -ti:8000 | xargs kill -9
-```
-
-**Coverage not generated:**
-```bash
-# Install coverage package
-pip install pytest-cov
-
-# Run with coverage flag
-pytest --cov=app --cov-report=html
+def test_health_endpoint():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
 ```
 
 ---
 
-## Continuous Integration
+## CI/CD Integration
 
-Tests run automatically on every commit via GitHub Actions (if configured).
+Tests are designed to run in CI pipelines:
 
-**Local pre-commit testing:**
-```bash
-# Run quick smoke tests
-pytest tests/test_smoke.py
-
-# Run full test suite
-./run_all_tests.sh
+```yaml
+# GitHub Actions example
+- name: Run Tests
+  run: |
+    cd backend
+    pip install -r requirements.txt
+    pip install -r tests/requirements-test.txt
+    pytest tests/ -v --junitxml=test-results.xml
 ```
 
 ---
 
-## Best Practices
+## Known Limitations
 
-1. **Write tests first** (TDD approach)
-2. **Keep tests isolated** (no dependencies between tests)
-3. **Use fixtures** for common test data
-4. **Mock external services** (don't hit real APIs in tests)
-5. **Test edge cases** (empty inputs, null values, errors)
-6. **Maintain >80% coverage** for critical code
-7. **Run tests before commits** to catch issues early
-
----
-
-## Additional Resources
-
-- Backend test configurations: `backend/pytest.ini`
-- Frontend test setup: `frontend/jest.config.js`
-- Test utilities: `backend/tests/__init__.py`
-- Detailed test reports: `backend/tests/README.md`
+1. **No database tests**: `TestDatabaseTransactions` class is placeholder
+2. **No API contract tests**: `TestAPIContractConsistency` class is placeholder
+3. **Event format sensitivity**: Some tests may show 0 values if event format doesn't match extractor expectations

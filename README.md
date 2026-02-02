@@ -1,359 +1,198 @@
-# 🎓 Privacy-Preserving AI-Based Cheating Detection System
+# Cheating Detector
 
-> **Camera-free, AI-powered online exam proctoring** using behavioral biometrics and answer similarity analysis.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com/)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4+-orange.svg)](https://scikit-learn.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-14+-black.svg)](https://nextjs.org)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+> **Privacy-Preserving AI-Based Cheating Detection System**
 
----
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Quick Start](#quick-start)
-- [API Documentation](#api-documentation)
-- [ML Pipeline](#ml-pipeline)
-- [Research & Evaluation](#research--evaluation)
-- [Contributing](#contributing)
+A behavioral biometrics-based online exam proctoring system that detects cheating through analysis of keyboard and mouse interaction patterns—without using webcams, microphones, or screen capture.
 
 ---
 
-## Overview
+## What It Does
 
-This system detects potential cheating in online exams **without invasive monitoring** (no camera or microphone). Instead, it analyzes:
+This system monitors **how** students interact with an exam interface, not what they look like or what's on their screen. It analyzes:
 
-| Signal | Description |
-|--------|-------------|
-| **Keystroke Dynamics** | Typing speed, rhythm, inter-key delays |
-| **Hesitation Patterns** | Pauses, thinking time, delays |
-| **Paste Behavior** | Copy-paste events, content length |
-| **Focus/Blur** | Tab switching, window focus changes |
-| **Answer Similarity** | Semantic similarity between student answers |
+| Signal | What's Captured | Why It Matters |
+|--------|-----------------|----------------|
+| **Keystroke Dynamics** | Typing speed, inter-key delays, rhythm | Copied answers show unnatural typing patterns |
+| **Paste Behavior** | Frequency, content length, timing | Excessive pasting indicates external sources |
+| **Focus/Blur Events** | Tab switches, window focus loss | Frequent switching suggests reference lookup |
+| **Hesitation Patterns** | Long pauses, backspacing | Natural writing has different rhythm than copying |
 
-### Why Privacy-Preserving?
-
-- ✅ No camera or microphone required
-- ✅ No screen recording
-- ✅ All ML processing happens locally
-- ✅ Explainable results (human reviewable)
-- ✅ GDPR-friendly design
+The system computes a **risk score (0.0–1.0)** using a weighted fusion of behavioral, anomaly, and similarity signals.
 
 ---
 
-## Features
-
-### For Students
-- Clean, distraction-free exam interface
-- Monaco code editor for coding questions
-- Timer and question navigation
-- Immediate submission confirmation
-
-### For Administrators
-- Real-time session monitoring
-- Risk score visualization (0-100%)
-- Detailed behavioral analysis
-- Event timeline viewer
-- JSON export for research
-
-### For Researchers
-- Synthetic data generation
-- Model training pipeline
-- Configurable thresholds
-- Extensible feature extraction
-
----
-
-## Architecture
+## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTEND (Next.js)                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │
-│  │   Home   │  │   Exam   │  │  Admin   │  │ Behavior Logger  │ │
-│  │   Page   │  │Interface │  │Dashboard │  │  (useBehavior)   │ │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                              │ REST API │
-┌─────────────────────────────────────────────────────────────────┐
-│                        BACKEND (FastAPI)                        │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │
-│  │  Events  │  │ Sessions │  │  Exams   │  │    Analysis      │ │
-│  │   API    │  │   API    │  │   API    │  │   + Simulation   │ │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘ │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                    ML PIPELINE                              ││
-│  │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌─────────────┐  ││
-│  │  │ Keystroke │ │ Hesitation│ │   Paste   │ │    Focus    │  ││
-│  │  │ Features  │ │ Features  │ │  Features │ │   Features  │  ││
-│  │  └───────────┘ └───────────┘ └───────────┘ └─────────────┘  ││
-│  │  ┌───────────┐ ┌───────────┐ ┌───────────┐                  ││
-│  │  │ Anomaly   │ │ Similarity│ │  Fusion   │                  ││
-│  │  │ Detection │ │  (NLP)    │ │  Model    │                  ││
-│  │  └───────────┘ └───────────┘ └───────────┘                  ││
-│  └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┴───────────────┐
-              │         STORAGE               │
-              │  ┌─────────┐  ┌─────────────┐ │
-              │  │ SQLite  │  │ JSONL Logs  │ │
-              │  │   DB    │  │  (Events)   │ │
-              │  └─────────┘  └─────────────┘ │
-              └───────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (Next.js)                         │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │  useBehaviorLogger Hook                                      │  │
+│  │  • Captures keydown/keyup events                             │  │
+│  │  • Tracks paste events (content length only)                 │  │
+│  │  • Monitors window focus/blur                                │  │
+│  │  • Batches events → POST /api/events/log                     │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────┬─────────────────────────────────────┘
+                               │ REST API
+                               ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                         BACKEND (FastAPI)                          │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │  Events API → JSONL Storage per Session                      │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                               │                                    │
+│                               ▼                                    │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │  Feature Extraction Pipeline                                 │  │
+│  │  • KeystrokeFeatures: WPM, delays, rhythm                    │  │
+│  │  • HesitationFeatures: pauses, backspace patterns            │  │
+│  │  • PasteFeatures: count, lengths, frequency                  │  │
+│  │  • FocusFeatures: blur count, unfocused duration             │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                               │                                    │
+│                               ▼                                    │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │  ML Models                                                   │  │
+│  │  • Isolation Forest (anomaly detection)                      │  │
+│  │  • Risk Fusion Model (weighted ensemble)                     │  │
+│  │  Formula: risk = behavioral×0.35 + anomaly×0.35 + sim×0.30   │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                               │                                    │
+│                               ▼                                    │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │  Admin Dashboard API                                         │  │
+│  │  • Session list with risk scores                             │  │
+│  │  • Drill-down timeline visualization                         │  │
+│  │  • Export and evaluation metrics                             │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Prerequisites
+
+### System Requirements
+
+| Component | Version |
+|-----------|---------|
+| Python | 3.11+ |
+| Node.js | 18+ |
+| PostgreSQL | 14+ (production) |
+| Redis | 7+ (optional, for caching) |
+
+### Backend Dependencies
+
+```
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+sqlalchemy>=2.0.25
+scikit-learn>=1.4.0
+sentence-transformers>=2.2.2
+pandas>=2.1.4
+numpy>=1.26.3
+pytest>=7.4.4
+```
+
+### Frontend Dependencies
+
+- Next.js 14
+- TypeScript 5
+- React 18
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- Python 3.10+
-- Git
-
-### 1. Clone & Setup
+### 1. Clone & Setup Environment
 
 ```bash
-git clone <repository-url>
-cd "Cheeating Detector"
+git clone <repo-url>
+cd Cheating-Detector
+
+# Create environment file
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
 ### 2. Backend Setup
 
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
-
-# Activate (Windows)
-.\venv\Scripts\activate
-# Activate (Linux/Mac)
-source venv/bin/activate
-
-# Install dependencies
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Start server
-uvicorn app.main:app --reload --port 8000
+# Start development server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 3. Frontend Setup
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
 ```
 
 ### 4. Access the Application
 
-| URL | Description |
-|-----|-------------|
-| http://localhost:3000 | Home Page |
-| http://localhost:3000/exam/demo-exam-1 | Demo Exam |
-| http://localhost:3000/admin | Admin Dashboard |
-| http://localhost:8000/docs | API Documentation |
-
----
-
-## API Documentation
-
-### Core Endpoints
-
-#### Events API
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/events/log` | Log behavioral events |
-
-#### Sessions API
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/sessions/create` | Create exam session |
-| POST | `/api/sessions/{id}/start` | Start session |
-| POST | `/api/sessions/{id}/submit` | Submit exam |
-
-#### Analysis API
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/analysis/analyze` | Analyze session |
-| GET | `/api/analysis/session/{id}/timeline` | Get event timeline |
-| GET | `/api/analysis/dashboard/summary` | Dashboard stats |
-
-#### Simulation API
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/simulation/simulate` | Generate test sessions |
-| POST | `/api/simulation/generate-training-data` | Create training dataset |
-| POST | `/api/simulation/train-models` | Train ML models |
-
----
-
-## ML Pipeline
-
-### Feature Extraction
-
-| Module | Features |
-|--------|----------|
-| `keystroke.py` | Inter-key delay, hold time, typing speed, rhythm variance |
-| `hesitation.py` | Pause count, duration, distribution, time to first keystroke |
-| `paste.py` | Paste count, length, paste-after-blur correlation |
-| `focus.py` | Blur count, unfocused time, extended absences |
-
-### Risk Scoring Formula
-
-```
-Final Score = 0.35 × behavioral + 0.35 × anomaly + 0.30 × similarity
-```
-
-Where:
-- **behavioral** = weighted feature scores from pipeline
-- **anomaly** = Isolation Forest anomaly detection
-- **similarity** = sentence-transformer cosine similarity
-
-### Thresholds
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `RISK_THRESHOLD` | 0.75 | Score for flagging |
-| `SIMILARITY_THRESHOLD` | 0.85 | Answer similarity flag |
-| `MIN_PAUSE_DURATION` | 2000ms | Pause detection |
-
----
-
-## Research & Evaluation
-
-### Generating Test Data
-
-```bash
-# Generate 50 honest + 20 cheating sessions
-curl -X POST http://localhost:8000/api/simulation/generate-training-data \
-  -H "Content-Type: application/json" \
-  -d '{"honest_count": 50, "cheater_count": 20}'
-```
-
-### Training Models
-
-```bash
-curl -X POST http://localhost:8000/api/simulation/train-models
-```
-
-### Evaluation Metrics
-
-The system supports the following evaluation metrics:
-
-| Metric | Description |
-|--------|-------------|
-| **Accuracy** | Overall classification accuracy |
-| **Precision** | True positives / (True + False positives) |
-| **Recall** | True positives / (True + False negatives) |
-| **F1 Score** | Harmonic mean of precision and recall |
-| **AUC-ROC** | Area under ROC curve |
-
-### Export for Analysis
-
-Use the Admin Dashboard's "Export Data" button or:
-
-```bash
-curl http://localhost:8000/api/analysis/dashboard/summary > export.json
-```
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Admin Dashboard**: http://localhost:3000/admin
 
 ---
 
 ## Project Structure
 
 ```
-Cheeating Detector/
-├── frontend/                 # Next.js application
-│   ├── src/
-│   │   ├── app/             # Pages (home, exam, admin)
-│   │   ├── components/      # React components
-│   │   ├── hooks/           # useBehaviorLogger
-│   │   └── lib/             # API client
-│   └── package.json
-│
-├── backend/                  # FastAPI application
+Cheating-Detector/
+├── backend/
 │   ├── app/
-│   │   ├── api/             # REST endpoints
-│   │   ├── core/            # Config, database
-│   │   ├── features/        # Feature extraction
-│   │   ├── ml/              # ML models
-│   │   └── models/          # Database models
-│   ├── data/                # Event logs, datasets
-│   ├── models/              # Trained models
+│   │   ├── api/           # FastAPI routers
+│   │   ├── features/      # Feature extraction modules
+│   │   ├── ml/            # ML models (anomaly, fusion)
+│   │   └── models/        # Pydantic/SQLAlchemy models
+│   ├── data/datasets/     # Training datasets
+│   ├── tests/             # pytest test suite
 │   └── requirements.txt
-│
-├── DATASETS.md              # Research dataset guide
-└── README.md                # This file
+├── frontend/
+│   ├── src/
+│   │   ├── app/           # Next.js pages
+│   │   ├── components/    # React components
+│   │   ├── hooks/         # Custom hooks (useBehaviorLogger)
+│   │   └── lib/           # API utilities
+│   └── package.json
+├── models/                # Trained ML models (.pkl)
+├── docker-compose.yml     # Production deployment
+└── nginx/                 # Reverse proxy config
 ```
 
 ---
 
-## Configuration
+## Documentation
 
-Edit `backend/.env`:
-
-```env
-# Database
-DATABASE_URL=sqlite:///./data/cheating_detector.db
-
-# Security
-SECRET_KEY=your-secret-key
-
-# CORS
-CORS_ORIGINS=["http://localhost:3000"]
-
-# ML Thresholds
-SIMILARITY_THRESHOLD=0.85
-RISK_THRESHOLD=0.75
-
-# Feature Extraction
-MIN_PAUSE_DURATION=2000
-MAX_TYPING_SPEED=150
-```
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests
-5. Submit a pull request
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System design and module communication |
+| [API.md](API.md) | Complete REST API reference |
+| [DATASETS.md](DATASETS.md) | Training data sources and structure |
+| [TESTING.md](TESTING.md) | Test suite and coverage |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Docker and production setup |
+| [ADMIN_DASHBOARD.md](ADMIN_DASHBOARD.md) | Admin features guide |
+| [RESEARCH_GUIDE.md](RESEARCH_GUIDE.md) | Theoretical approach |
+| [RESULTS.md](RESULTS.md) | Performance metrics |
 
 ---
 
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
-
----
-
-## Citation
-
-If you use this system in your research, please cite:
-
-```bibtex
-@software{cheating_detection_2024,
-  title = {Privacy-Preserving AI-Based Cheating Detection System},
-  author = {Your Name},
-  year = {2024},
-  url = {https://github.com/your-repo}
-}
-```
-
----
-
-<p align="center">
-  Built with ❤️ for academic integrity research
-</p>

@@ -1,612 +1,544 @@
-# API Documentation - Cheating Detector
+# API Reference
 
-**Version:** 1.0.0  
-**Base URL:** `http://localhost:8000` (development)  
-**Last Updated:** January 18, 2026
+> Complete REST API documentation for the Cheating Detection System
 
----
-
-## Table of Contents
-
-1. [Authentication](#authentication)
-2. [Session Management](#session-management)
-3. [Event Logging](#event-logging)
-4. [Analysis Endpoints](#analysis-endpoints)
-5. [Dashboard & Export](#dashboard--export)
-6. [Data Models](#data-models)
-7. [Error Handling](#error-handling)
-8. [Rate Limiting](#rate-limiting)
-9. [Example Workflows](#example-workflows)
+**Base URL**: `http://localhost:8000`
 
 ---
 
-## Authentication
+## Health Check
 
-### POST /api/auth/login
+### `GET /`
 
-Authenticate a user and receive an access token.
+Root health check endpoint.
 
-**Request:**
+**Response**:
 ```json
 {
-  "email": "admin@example.com",
-  "password": "securepassword"
+  "status": "healthy",
+  "service": "Cheating Detection API",
+  "version": "0.1.0"
 }
 ```
 
-**Response:**
+### `GET /health`
+
+Detailed health check.
+
+**Response**:
 ```json
 {
-  "access_token": "eyJhbGc...",
-  "token_type": "bearer",
-  "expires_in": 3600
-}
-```
-
-**Status Codes:**
-- `200` - Success
-- `401` - Invalid credentials
-- `429` - Too many requests
-
----
-
-## Session Management
-
-### POST /api/sessions/create
-
-Create a new exam session.
-
-**Request:**
-```json
-{
-  "exam_id": "CS101-Midterm-2026",
-  "student_id": "student_12345",
-  "metadata": {
-    "exam_duration": 7200,
-    "total_questions": 20
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "session_id": "sess_abc123def456",
-  "exam_id": "CS101-Midterm-2026",
-  "student_id": "student_12345",
-  "start_time": "2026-01-18T10:00:00Z",
-  "status": "active"
-}
-```
-
-**Status Codes:**
-- `201` - Session created
-- `400` - Invalid request
-- `401` - Unauthorized
-
----
-
-### GET /api/sessions/{session_id}
-
-Get session details and current status.
-
-**Response:**
-```json
-{
-  "session_id": "sess_abc123def456",
-  "exam_id": "CS101-Midterm-2026",
-  "student_id": "student_12345",
-  "start_time": "2026-01-18T10:00:00Z",
-  "end_time": null,
-  "status": "active",
-  "event_count": 1247,
-  "current_risk_score": 0.32,
-  "is_flagged": false
+  "status": "healthy",
+  "database": "connected",
+  "ml_models": "loaded"
 }
 ```
 
 ---
 
-### POST /api/sessions/{session_id}/submit
+## Events API
 
-Submit and finalize an exam session.
+**Prefix**: `/api/events`
 
-**Request:**
+### `POST /api/events/log`
+
+Log a batch of behavioral events from the exam frontend.
+
+**Request Body**:
 ```json
 {
-  "answers": {
-    "q1": "Answer to question 1",
-    "q2": "Answer to question 2"
-  },
-  "completion_time": "2026-01-18T11:30:00Z"
-}
-```
-
-**Response:**
-```json
-{
-  "session_id": "sess_abc123def456",
-  "status": "completed",
-  "final_risk_score": 0.28,
-  "is_flagged": false,
-  "risk_level": "low"
-}
-```
-
----
-
-## Event Logging
-
-### POST /api/events/log
-
-Log behavioral events during an exam session.
-
-**Request:**
-```json
-{
-  "session_id": "sess_abc123def456",
+  "session_id": "abc123-uuid",
   "events": [
     {
+      "session_id": "abc123-uuid",
+      "question_id": "q1",
       "event_type": "key",
-      "timestamp": 1705569600000,
       "data": {
         "type": "keydown",
         "key": "a",
-        "code": "KeyA"
-      }
-    },
-    {
-      "event_type": "paste",
-      "timestamp": 1705569650000,
-      "data": {
-        "length": 127
-      }
-    },
-    {
-      "event_type": "blur",
-      "timestamp": 1705569700000,
-      "data": {}
+        "code": "KeyA",
+        "shift": false,
+        "ctrl": false,
+        "alt": false
+      },
+      "timestamp": 1700000000000
     }
   ]
 }
 ```
 
-**Response:**
+**Response**:
 ```json
 {
-  "session_id": "sess_abc123def456",
-  "events_logged": 3,
-  "status": "success"
+  "success": true,
+  "events_received": 50,
+  "session_id": "abc123-uuid"
 }
 ```
 
-**Event Types:**
-- `key` - Keyboard events
-- `mouse` - Mouse movement
-- `click` - Mouse clicks
-- `paste` - Paste events
-- `blur` / `focus` - Window focus events
-- `navigation` - Question navigation
+### `GET /api/events/session/{session_id}`
 
----
+Retrieve events for a specific session.
 
-### POST /api/events/batch
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | path | Yes | Session UUID |
+| `limit` | query | No | Max events to return (default: 1000) |
 
-Log multiple event batches efficiently (recommended for production).
-
-**Request:**
+**Response**:
 ```json
 {
-  "batches": [
-    {
-      "session_id": "sess_abc123",
-      "events": [...]
-    },
-    {
-      "session_id": "sess_def456",
-      "events": [...]
-    }
-  ]
-}
-```
-
-**Response:**
-```json
-{
-  "batches_processed": 2,
-  "total_events_logged": 1523,
-  "status": "success"
-}
-```
-
----
-
-## Analysis Endpoints
-
-### POST /api/analysis/analyze
-
-Analyze a completed session for cheating detection.
-
-**Request:**
-```json
-{
-  "session_id": "sess_abc123def456",
-  "options": {
-    "include_features": true,
-    "include_explanation": true
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "session_id": "sess_abc123def456",
-  "analysis": {
-    "final_risk_score": 0.78,
-    "is_flagged": true,
-    "risk_level": "high",
-    "confidence": 0.92,
-    "risk_factors": [
-      "Content pasted: 3 paste events",
-      "Tab switching detected: 5 times",
-      "Extended pause: 45.2s"
-    ]
-  },
-  "features": {
-    "keystroke": {...},
-    "hesitation": {...},
-    "paste": {...},
-    "focus": {...}
-  },
-  "component_scores": {
-    "behavioral_score": 0.65,
-    "anomaly_score": 0.82,
-    "similarity_score": 0.45
-  }
-}
-```
-
-**Status Codes:**
-- `200` - Analysis complete
-- `404` - Session not found
-- `422` - Session not yet completed
-
----
-
-### GET /api/analysis/risk-score/{session_id}
-
-Get real-time risk score during active exam.
-
-**Response:**
-```json
-{
-  "session_id": "sess_abc123def456",
-  "current_risk_score": 0.42,
-  "is_flagged": false,
-  "risk_level": "medium",
-  "updated_at": "2026-01-18T11:15:00Z"
-}
-```
-
----
-
-### POST /api/analysis/batch
-
-Analyze multiple sessions in bulk.
-
-**Request:**
-```json
-{
-  "session_ids": ["sess_abc123", "sess_def456", "sess_ghi789"]
-}
-```
-
-**Response:**
-```json
-{
-  "results": [
-    {
-      "session_id": "sess_abc123",
-      "risk_score": 0.78,
-      "is_flagged": true
-    },
-    ...
-  ],
-  "total_analyzed": 3
-}
-```
-
----
-
-## Dashboard & Export
-
-### GET /api/dashboard/summary
-
-Get dashboard summary statistics.
-
-**Query Parameters:**
-- `exam_id` (optional) - Filter by exam
-- `start_date` (optional) - Filter by date range
-- `end_date` (optional) - Filter by date range
-
-**Response:**
-```json
-{
-  "total_sessions": 324,
-  "active_sessions": 12,
-  "completed_sessions": 312,
-  "flagged_sessions": 28,
-  "flagged_rate": 0.087,
-  "average_risk_score": 0.23,
-  "statistics": {
-    "by_risk_level": {
-      "low": 261,
-      "medium": 35,
-      "high": 15,
-      "critical": 13
-    }
-  }
-}
-```
-
----
-
-### GET /api/export/session/{session_id}
-
-Export session data and analysis.
-
-**Query Parameters:**
-- `format` - `json` | `csv` | `pdf`
-- `include_events` - `true` | `false`
-
-**Response (JSON):**
-```json
-{
-  "session": {...},
-  "analysis": {...},
+  "session_id": "abc123-uuid",
   "events": [...],
-  "generated_at": "2026-01-18T11:30:00Z"
+  "count": 500
 }
 ```
 
 ---
 
-## Data Models
+## Sessions API
 
-### Session
+**Prefix**: `/api/sessions`
 
-```typescript
-interface Session {
-  session_id: string;
-  exam_id: string;
-  student_id: string;
-  start_time: string;  // ISO 8601
-  end_time?: string;   // ISO 8601
-  status: "active" | "completed" | "flagged";
-  event_count: number;
-  current_risk_score: number;
-  is_flagged: boolean;
-}
-```
+### `POST /api/sessions/create`
 
-### Event
+Create a new exam session.
 
-```typescript
-interface Event {
-  event_type: "key" | "mouse" | "click" | "paste" | "blur" | "focus" | "navigation";
-  timestamp: number;  // Unix timestamp (ms)
-  data: Record<string, any>;
-}
-```
-
-### Analysis Result
-
-```typescript
-interface AnalysisResult {
-  session_id: string;
-  final_risk_score: number;      // 0-1
-  is_flagged: boolean;
-  risk_level: "low" | "medium" | "high" | "critical";
-  confidence: number;              // 0-1
-  risk_factors: string[];
-  component_scores: {
-    behavioral_score: number;
-    anomaly_score: number;
-    similarity_score: number;
-  };
-}
-```
-
----
-
-## Error Handling
-
-All errors follow this format:
-
+**Request Body**:
 ```json
 {
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid session_id format",
-    "details": {
-      "field": "session_id",
-      "constraint": "Must match pattern: sess_[a-z0-9]+"
+  "exam_id": "demo-exam-1",
+  "student_id": "student-123"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "session-uuid",
+  "exam_id": "demo-exam-1",
+  "student_id": "student-123",
+  "status": "not_started",
+  "started_at": null,
+  "submitted_at": null,
+  "current_question": 0
+}
+```
+
+### `GET /api/sessions/{session_id}`
+
+Get session details.
+
+**Response**: Same as create response.
+
+### `POST /api/sessions/{session_id}/start`
+
+Start an exam session.
+
+**Response**:
+```json
+{
+  "message": "Session started",
+  "session_id": "session-uuid"
+}
+```
+
+### `POST /api/sessions/{session_id}/submit`
+
+Submit the exam session.
+
+**Response**:
+```json
+{
+  "message": "Exam submitted successfully",
+  "session_id": "session-uuid"
+}
+```
+
+### `POST /api/sessions/{session_id}/answer`
+
+Submit an answer for a question.
+
+**Request Body**:
+```json
+{
+  "question_id": "q1",
+  "content": "def is_palindrome(s): ..."
+}
+```
+
+**Response**:
+```json
+{
+  "message": "Answer saved",
+  "question_id": "q1"
+}
+```
+
+### `GET /api/sessions/list/all`
+
+List all sessions.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | query | No | Filter by status: `not_started`, `in_progress`, `submitted`, `analyzed` |
+
+**Response**:
+```json
+{
+  "sessions": [...],
+  "count": 15
+}
+```
+
+---
+
+## Exams API
+
+**Prefix**: `/api/exams`
+
+### `GET /api/exams/list`
+
+List all available exams.
+
+**Response**:
+```json
+{
+  "exams": [
+    {
+      "id": "demo-exam-1",
+      "title": "Python Fundamentals Assessment",
+      "description": "Test your knowledge...",
+      "duration_minutes": 30,
+      "question_count": 6
     }
+  ]
+}
+```
+
+### `GET /api/exams/{exam_id}`
+
+Get exam details with questions.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `exam_id` | path | Yes | Exam identifier |
+| `include_answers` | query | No | Include correct answers (default: false) |
+
+**Response**:
+```json
+{
+  "id": "demo-exam-1",
+  "title": "Python Fundamentals Assessment",
+  "description": "...",
+  "duration_minutes": 30,
+  "questions": [
+    {
+      "id": "q1",
+      "type": "mcq",
+      "category": "mcq",
+      "difficulty": "easy",
+      "content": "What is the output of: print(type([]))?",
+      "points": 5,
+      "options": [
+        {"id": "a", "text": "<class 'tuple'>"},
+        {"id": "b", "text": "<class 'list'>"}
+      ]
+    }
+  ]
+}
+```
+
+### `POST /api/exams/create`
+
+Create a new exam.
+
+**Request Body**:
+```json
+{
+  "title": "New Exam",
+  "description": "Description",
+  "duration_minutes": 60
+}
+```
+
+### `GET /api/exams/categories`
+
+Get list of question categories.
+
+**Response**:
+```json
+{
+  "categories": [
+    {"id": "mcq", "name": "Multiple Choice Questions", "description": "..."},
+    {"id": "coding", "name": "Coding Problems", "description": "..."},
+    {"id": "subjective", "name": "Subjective Questions", "description": "..."}
+  ]
+}
+```
+
+### `GET /api/exams/questions/search`
+
+Search and filter questions from the question bank.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `category` | query | Filter by category |
+| `difficulty` | query | Filter by difficulty: `easy`, `medium`, `hard` |
+| `subject` | query | Filter by subject |
+| `topic` | query | Filter by topic |
+| `tags` | query | Comma-separated list of tags |
+
+### `GET /api/exams/questions/random`
+
+Get random questions from the question bank.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `category` | query | Yes | Category to select from |
+| `count` | query | No | Number of questions (default: 5) |
+| `difficulty` | query | No | Filter by difficulty |
+| `subject` | query | No | Filter by subject |
+
+---
+
+## Analysis API
+
+**Prefix**: `/api/analysis`
+
+### `POST /api/analysis/analyze`
+
+Analyze a session and compute risk score.
+
+**Request Body**:
+```json
+{
+  "session_id": "abc123-uuid",
+  "include_features": true,
+  "by_question": false
+}
+```
+
+**Response**:
+```json
+{
+  "session_id": "abc123-uuid",
+  "overall_score": 0.65,
+  "typing_score": 0.2,
+  "hesitation_score": 0.5,
+  "paste_score": 0.9,
+  "focus_score": 0.6,
+  "is_flagged": false,
+  "flag_reasons": ["High paste content ratio"],
+  "features": {...}
+}
+```
+
+### `POST /api/analysis/by-question`
+
+Analyze a session with per-question breakdown.
+
+**Response**: Array of risk scores per question.
+
+### `GET /api/analysis/features/{session_id}`
+
+Get detailed extracted features for a session.
+
+### `GET /api/analysis/timeline/{session_id}`
+
+Get a timeline of events for visualization.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | query | Max events (default: 100) |
+
+### `GET /api/analysis/dashboard`
+
+Get summary statistics for all analyzed sessions.
+
+**Response**:
+```json
+{
+  "total_sessions": 50,
+  "flagged_sessions": 12,
+  "average_risk": 0.42,
+  "sessions": [
+    {
+      "session_id": "abc123",
+      "risk_score": 0.75,
+      "is_flagged": true,
+      "event_count": 500,
+      "flag_reasons": ["Excessive pasting"],
+      "scores": {
+        "typing": 0.3,
+        "hesitation": 0.5,
+        "paste": 0.95,
+        "focus": 0.7
+      },
+      "created_at": "2024-01-15T10:30:00Z",
+      "is_simulated": false
+    }
+  ]
+}
+```
+
+---
+
+## Simulation API
+
+**Prefix**: `/api/simulation`
+
+### `POST /api/simulation/simulate`
+
+Generate simulated exam sessions for testing.
+
+**Request Body**:
+```json
+{
+  "is_cheater": false,
+  "count": 10,
+  "question_count": 6
+}
+```
+
+**Response**:
+```json
+{
+  "generated": 10,
+  "type": "honest",
+  "sessions": [
+    {
+      "session_id": "sim-uuid",
+      "is_cheater": false,
+      "event_count": 250,
+      "file": "session_sim-uuid.jsonl"
+    }
+  ]
+}
+```
+
+### `POST /api/simulation/generate-training-data`
+
+Generate a labeled training dataset.
+
+**Request Body**:
+```json
+{
+  "honest_count": 50,
+  "cheater_count": 20
+}
+```
+
+### `POST /api/simulation/train-models`
+
+Train ML models on the generated training data.
+
+**Response**:
+```json
+{
+  "message": "Models trained successfully",
+  "sessions_used": 70,
+  "anomaly_model_path": "models/anomaly_detector.pkl",
+  "fusion_model_path": "models/fusion_model.pkl"
+}
+```
+
+### `GET /api/simulation/status`
+
+Get the current status of simulation and models.
+
+**Response**:
+```json
+{
+  "training_data_exists": true,
+  "training_info": {
+    "generated_at": "2024-01-15T10:00:00Z",
+    "honest_count": 50,
+    "cheater_count": 20
   },
-  "timestamp": "2026-01-18T11:30:00Z"
+  "anomaly_model_exists": true,
+  "fusion_model_exists": true,
+  "event_logs_dir": "data/event_logs",
+  "models_dir": "models"
 }
 ```
 
-**Error Codes:**
-- `VALIDATION_ERROR` - Invalid request data
-- `NOT_FOUND` - Resource not found
-- `UNAUTHORIZED` - Authentication required
-- `FORBIDDEN` - Insufficient permissions
-- `RATE_LIMIT_EXCEEDED` - Too many requests
-- `INTERNAL_ERROR` - Server error
-
 ---
 
-## Rate Limiting
+## Evaluation API
 
-**Default Limits:**
-- Event logging: 1000 events/minute per session
-- Analysis: 10 requests/minute per API key
-- Dashboard: 60 requests/minute
+**Prefix**: `/api/evaluation`
 
-**Rate Limit Headers:**
-```
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 847
-X-RateLimit-Reset: 1705569720
-```
+### `POST /api/evaluation/evaluate`
 
-**429 Response:**
+Evaluate the model on the training dataset.
+
+**Request Body**:
 ```json
 {
-  "error": {
-    "code": "RATE_LIMIT_EXCEEDED",
-    "message": "Rate limit exceeded. Retry after 45 seconds"
-  },
-  "retry_after": 45
+  "threshold": 0.75
 }
 ```
 
----
-
-## Example Workflows
-
-### Complete Exam Flow
-
-```javascript
-// 1. Create session
-const session = await fetch('/api/sessions/create', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    exam_id: 'CS101-Midterm',
-    student_id: 'student_123'
-  })
-});
-const { session_id } = await session.json();
-
-// 2. Log events during exam
-const logEvents = async (events) => {
-  await fetch('/api/events/log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ session_id, events })
-  });
-};
-
-// 3.Monitor risk score in real-time (optional)
-const checkRisk = async () => {
-  const response = await fetch(`/api/analysis/risk-score/${session_id}`);
-  const {current_risk_score} = await response.json();
-  return current_risk_score;
-};
-
-// 4. Submit exam
-const submit = await fetch(`/api/sessions/${session_id}/submit`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    answers: examAnswers,
-    completion_time: new Date().toISOString()
-  })
-});
-
-// 5. Get final analysis
-const analysis = await fetch('/api/analysis/analyze', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    session_id,
-    options: { include_features: true }
-  })
-});
-const result = await analysis.json();
-console.log('Final risk:', result.analysis.final_risk_score);
-```
-
----
-
-### Admin Dashboard Flow
-
-```javascript
-// 1. Get summary statistics
-const summary = await fetch('/api/dashboard/summary?exam_id=CS101-Midterm');
-const stats = await summary.json();
-
-// 2. Analyze flagged sessions
-const flagged = stats.flagged_sessions;
-const analyses = await fetch('/api/analysis/batch', {
-  method: 'POST',
-  body: JSON.stringify({ session_ids: flaggedSessionIds })
-});
-
-// 3. Export detailed report
-const report = await fetch('/api/export/session/sess_abc123?format=pdf');
-const pdf = await report.blob();
-```
-
----
-
-## WebSocket API (Real-Time)
-
-### Connection
-
-```javascript
-const ws = new WebSocket('ws://localhost:8000/ws/monitor');
-
-ws.onopen = () => {
-  ws.send(JSON.stringify({
-    action: 'subscribe',
-    session_id: 'sess_abc123'
-  }));
-};
-
-ws.onmessage = (event) => {
-  const update = JSON.parse(event.data);
-  console.log('Risk update:', update.current_risk_score);
-};
-```
-
-### Messages
-
-**Subscribe to session:**
+**Response**:
 ```json
 {
-  "action": "subscribe",
-  "session_id": "sess_abc123"
+  "accuracy": 0.85,
+  "precision": 0.80,
+  "recall": 0.90,
+  "f1": 0.85,
+  "auc_roc": 0.92,
+  "confusion_matrix": [[40, 5], [2, 18]]
 }
 ```
 
-**Risk updates:**
+### `GET /api/evaluation/optimal-threshold`
+
+Find the optimal classification threshold.
+
+**Response**:
 ```json
 {
-  "type": "risk_update",
-  "session_id": "sess_abc123",
-  "current_risk_score": 0.45,
-  "timestamp": "2026-01-18T11:30:00Z"
+  "optimal_threshold": 0.65,
+  "f1_score": 0.87,
+  "metrics": {...}
+}
+```
+
+### `GET /api/evaluation/report`
+
+Generate a markdown evaluation report.
+
+### `GET /api/evaluation/dataset-info`
+
+Get information about the current training dataset.
+
+**Response**:
+```json
+{
+  "exists": true,
+  "total_sessions": 70,
+  "honest_sessions": 50,
+  "cheater_sessions": 20,
+  "balance_ratio": 2.5
 }
 ```
 
 ---
 
-## Best Practices
+## Error Responses
 
-1. **Batch Events:** Use `/api/events/batch` for production to reduce API calls
-2. **Error Handling:** Always handle rate limits and retry with exponential backoff
-3. **WebSocket for Real-Time:** Use WebSocket API for live monitoring dashboards
-4. **Compression:** Enable gzip compression for large event payloads
-5. **Authentication:** Always include JWT token in `Authorization: Bearer <token>` header
+All endpoints return standard HTTP error codes:
 
----
+| Code | Description |
+|------|-------------|
+| 400 | Bad Request - Invalid parameters |
+| 404 | Not Found - Resource doesn't exist |
+| 500 | Internal Server Error |
 
-## Support
-
-**Documentation:** https://docs.cheatingdetector.example.com  
-**API Status:** https://status.cheatingdetector.example.com  
-**Support Email:** api-support@example.com
+**Error Response Format**:
+```json
+{
+  "detail": "Session not found"
+}
+```
