@@ -170,32 +170,52 @@ class FeatureExtractor:
         features.paste_score = calculate_paste_score(features.paste)
         features.focus_score = calculate_focus_score(features.focus)
         
-        # Calculate weighted overall score
-        features.overall_score = (
-            self.WEIGHTS["typing"] * features.typing_score +
-            self.WEIGHTS["hesitation"] * features.hesitation_score +
-            self.WEIGHTS["paste"] * features.paste_score +
-            self.WEIGHTS["focus"] * features.focus_score +
-            self.WEIGHTS["text"] * features.text_score
-        )
-        
-        # Determine if flagged - either overall threshold OR any individual score is very high
-        individual_threshold = getattr(settings, 'individual_score_threshold', 0.60)
-        
-        # Flag if overall score exceeds threshold
-        is_over_threshold = features.overall_score >= self.risk_threshold
-        
-        # Also flag if any individual score is very high (clear cheating indicator)
-        has_high_individual = (
-            features.paste_score >= individual_threshold or
-            features.focus_score >= individual_threshold or
-            features.hesitation_score >= individual_threshold
-        )
-        
-        features.is_flagged = is_over_threshold or has_high_individual
-        
-        # Generate flag reasons
-        features.flag_reasons = self._generate_flag_reasons(features)
+        # Use ML-based prediction instead of threshold logic
+        try:
+            from app.ml.predictor import predict_cheating
+            
+            # Get ML prediction
+            ml_result = predict_cheating(
+                features=features.to_dict(),
+                events=events,
+                session_id=session_id
+            )
+            
+            features.overall_score = ml_result.probability
+            features.is_flagged = ml_result.is_flagged
+            
+            # Combine ML reasons with behavioral reasons
+            features.flag_reasons = self._generate_flag_reasons(features)
+            
+            # Add ML-specific reasons
+            if ml_result.anomaly_detected:
+                features.flag_reasons.extend(ml_result.anomaly_reasons)
+            if ml_result.burst_patterns:
+                features.flag_reasons.extend(ml_result.burst_patterns[:3])  # Top 3
+                
+        except Exception as e:
+            # Fallback to weighted average if ML fails
+            import logging
+            logging.warning(f"ML prediction failed, using fallback: {e}")
+            
+            features.overall_score = (
+                self.WEIGHTS["typing"] * features.typing_score +
+                self.WEIGHTS["hesitation"] * features.hesitation_score +
+                self.WEIGHTS["paste"] * features.paste_score +
+                self.WEIGHTS["focus"] * features.focus_score +
+                self.WEIGHTS["text"] * features.text_score
+            )
+            
+            # Fallback threshold check
+            individual_threshold = getattr(settings, 'individual_score_threshold', 0.60)
+            is_over_threshold = features.overall_score >= self.risk_threshold
+            has_high_individual = (
+                features.paste_score >= individual_threshold or
+                features.focus_score >= individual_threshold or
+                features.hesitation_score >= individual_threshold
+            )
+            features.is_flagged = is_over_threshold or has_high_individual
+            features.flag_reasons = self._generate_flag_reasons(features)
         
         return features
     
