@@ -5,27 +5,10 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
-// Smart API URL detection - same logic as lib/api.ts
-function getApiBase(): string {
-    if (typeof window !== 'undefined') {
-        const hostname = window.location.hostname;
-        if (hostname.includes('onrender.com')) {
-            return 'https://cheating-detector-backend.onrender.com';
-        }
-        if (hostname.includes('devtunnels.ms')) {
-            return 'https://6vjfqk0n-8000.inc1.devtunnels.ms';
-        }
-        if (hostname === '192.168.89.1' || hostname.startsWith('192.168.')) {
-            return 'http://192.168.89.1:8000';
-        }
-    }
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-}
-
-const API_BASE = getApiBase();
+import { getDashboardSummary, analyzeSession, getSessionTimeline, simulateSession } from '@/lib/api';
 
 interface SessionScore {
     typing: number;
@@ -87,16 +70,19 @@ export default function AdminDashboard() {
     const [simulating, setSimulating] = useState(false);
     const [sessionFilter, setSessionFilter] = useState<'all' | 'real' | 'simulated'>('all');
 
+    // Guard against duplicate initial loads (React Strict Mode / HMR)
+    const hasLoadedRef = useRef(false);
+
     useEffect(() => {
+        if (hasLoadedRef.current) return;
+        hasLoadedRef.current = true;
         loadDashboard();
     }, []);
 
     async function loadDashboard() {
         try {
             setLoading(true);
-            const res = await fetch(`${API_BASE}/api/analysis/dashboard/summary`);
-            if (!res.ok) throw new Error('Failed to load dashboard');
-            const result = await res.json();
+            const result = await getDashboardSummary();
             setData(result);
         } catch (err) {
             setError('Failed to load dashboard. Make sure the backend is running.');
@@ -109,22 +95,12 @@ export default function AdminDashboard() {
     async function viewSession(sessionId: string) {
         try {
             // Get detailed analysis
-            const res = await fetch(`${API_BASE}/api/analysis/analyze`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId, include_features: true }),
-            });
-            if (res.ok) {
-                const details = await res.json();
-                setSelectedSession(details);
-            }
+            const details = await analyzeSession(sessionId);
+            setSelectedSession(details as any); // Cast because RiskScore vs SessionDetails might have mismatch, or update interface
 
             // Get timeline
-            const timelineRes = await fetch(`${API_BASE}/api/analysis/session/${sessionId}/timeline`);
-            if (timelineRes.ok) {
-                const timelineData = await timelineRes.json();
-                setTimeline(timelineData.timeline || []);
-            }
+            const timelineData = await getSessionTimeline(sessionId);
+            setTimeline(timelineData.timeline || []);
         } catch (err) {
             console.error('Failed to load session:', err);
         }
@@ -133,18 +109,8 @@ export default function AdminDashboard() {
     const generateTestData = useCallback(async (type: 'honest' | 'cheater') => {
         setSimulating(true);
         try {
-            const res = await fetch(`${API_BASE}/api/simulation/simulate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    is_cheater: type === 'cheater',
-                    count: 3,
-                    question_count: 6,
-                }),
-            });
-            if (res.ok) {
-                await loadDashboard();
-            }
+            await simulateSession(type === 'cheater', 3, 6);
+            await loadDashboard();
         } catch (err) {
             console.error('Simulation failed:', err);
         } finally {

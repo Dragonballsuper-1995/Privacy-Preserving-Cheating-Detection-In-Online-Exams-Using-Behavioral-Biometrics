@@ -79,7 +79,7 @@ app.add_middleware(
 # Import routers lazily to speed up startup
 def _include_routers():
     """Include API routers - called after app is created."""
-    from app.api import events, sessions, exams, analysis, simulation, evaluation
+    from app.api import events, sessions, exams, analysis, simulation, evaluation, code_execution
     
     app.include_router(events.router, prefix="/api/events", tags=["Events"])
     app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
@@ -87,6 +87,7 @@ def _include_routers():
     app.include_router(analysis.router, prefix="/api/analysis", tags=["Analysis"])
     app.include_router(simulation.router, prefix="/api/simulation", tags=["Simulation"])
     app.include_router(evaluation.router, prefix="/api/evaluation", tags=["Evaluation"])
+    app.include_router(code_execution.router, prefix="/api/code", tags=["Code Execution"])
 
 
 _include_routers()

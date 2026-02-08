@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     
     # CORS
-    cors_origins: Union[List[str], str] = ["http://localhost:3000"]
+    cors_origins: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     allowed_origins: str = "http://localhost:3000"  # For compatibility
     
     @field_validator('cors_origins', mode='before')
@@ -36,7 +36,8 @@ class Settings(BaseSettings):
     
     # ML Model Settings
     similarity_threshold: float = 0.85
-    risk_threshold: float = 0.50  # Lowered from 0.75 for better detection
+    risk_threshold: float = 0.40  # Lowered further for better detection
+    individual_score_threshold: float = 0.60  # Flag if ANY individual score exceeds this
     
     # Feature Extraction Settings
     min_pause_duration: int = 2000  # milliseconds

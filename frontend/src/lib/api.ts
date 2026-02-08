@@ -8,6 +8,11 @@ function getApiBase(): string {
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
 
+        // DEVELOPMENT: Localhost (use Next.js rewrites)
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return '';
+        }
+
         // PRODUCTION: Render deployment
         if (hostname.includes('onrender.com')) {
             return 'https://cheating-detector-backend.onrender.com';
@@ -19,13 +24,15 @@ function getApiBase(): string {
         }
 
         // DEVELOPMENT: Network IP access
-        if (hostname === '192.168.89.1' || hostname.startsWith('192.168.')) {
-            return 'http://192.168.89.1:8000';
+        // DEVELOPMENT: Network IP access
+        if (hostname.startsWith('192.168.')) {
+            return `http://${hostname}:8000`;
         }
     }
 
     // Fallback (Server-side rendering or localhost dev)
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    // Fallback (Server-side rendering or localhost dev)
+    return process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 }
 
 const API_BASE = getApiBase();
@@ -167,7 +174,21 @@ export async function analyzeSession(sessionId: string): Promise<RiskScore> {
 export async function getDashboardSummary(): Promise<{
     total_sessions: number;
     flagged_sessions: number;
-    sessions: { session_id: string; risk_score: number; is_flagged: boolean; event_count: number }[];
+    sessions: {
+        session_id: string;
+        risk_score: number;
+        is_flagged: boolean;
+        event_count: number;
+        flag_reasons: string[];
+        scores: {
+            typing: number;
+            hesitation: number;
+            paste: number;
+            focus: number;
+        };
+        created_at?: string;
+        is_simulated?: boolean;
+    }[];
 }> {
     const res = await fetch(`${API_BASE}/api/analysis/dashboard/summary`);
     if (!res.ok) throw new Error('Failed to fetch dashboard');
@@ -232,5 +253,103 @@ export async function getRandomQuestions(
 export async function getExamByCategory(examId: string): Promise<CategorizedExam> {
     const res = await fetch(`${API_BASE}/api/exams/${examId}/by-category`);
     if (!res.ok) throw new Error('Failed to fetch categorized exam');
+    return res.json();
+}
+
+export async function getSessionTimeline(sessionId: string): Promise<{ timeline: any[] }> {
+    const res = await fetch(`${API_BASE}/api/analysis/session/${sessionId}/timeline`);
+    if (!res.ok) throw new Error('Failed to fetch session timeline');
+    return res.json();
+}
+
+export async function simulateSession(isCheater: boolean, count: number = 3, questionCount: number = 6): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/simulation/simulate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            is_cheater: isCheater,
+            count,
+            question_count: questionCount,
+        }),
+    });
+    if (!res.ok) throw new Error('Simulation failed');
+}
+
+export interface CodeExecutionResult {
+    success: boolean;
+    stdout: string;
+    stderr: string;
+    execution_time: number;
+    error: string | null;
+}
+
+export async function executeCode(
+    code: string,
+    language: string = 'python',
+    timeout: number = 5,
+    testInput?: string
+): Promise<CodeExecutionResult> {
+    const res = await fetch(`${API_BASE}/api/code/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            code,
+            language,
+            timeout,
+            test_input: testInput,
+        }),
+    });
+    if (!res.ok) {
+        const error = await res.text();
+        throw new Error(`Code execution failed: ${error}`);
+    }
+    return res.json();
+}
+
+export interface TestCase {
+    input: unknown;
+    expected: unknown;
+}
+
+export interface TestCaseResult {
+    input: unknown;
+    expected: unknown;
+    actual: unknown;
+    passed: boolean;
+    error: string | null;
+}
+
+export interface RunTestsResult {
+    success: boolean;
+    passed: number;
+    failed: number;
+    total: number;
+    results: TestCaseResult[];
+    execution_time: number;
+    error: string | null;
+}
+
+export async function runTests(
+    code: string,
+    functionName: string,
+    testCases: TestCase[],
+    language: string = 'python',
+    timeout: number = 5
+): Promise<RunTestsResult> {
+    const res = await fetch(`${API_BASE}/api/code/run-tests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            code,
+            function_name: functionName,
+            test_cases: testCases,
+            language,
+            timeout,
+        }),
+    });
+    if (!res.ok) {
+        const error = await res.text();
+        throw new Error(`Test execution failed: ${error}`);
+    }
     return res.json();
 }

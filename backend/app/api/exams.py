@@ -135,8 +135,7 @@ MOCK_EXAMS: dict = {
                 topic="Data Structures",
                 content="Explain the difference between a list and a tuple in Python. When would you use each?",
                 points=15,
-                min_words=50,
-                max_words=150
+                max_words=200
             ),
             Question(
                 id="q4",
@@ -147,8 +146,7 @@ MOCK_EXAMS: dict = {
                 topic="Advanced Concepts",
                 content="What is a Python decorator? Provide a simple example of when you might use one.",
                 points=15,
-                min_words=50,
-                max_words=150
+                max_words=200
             ),
             Question(
                 id="q5",

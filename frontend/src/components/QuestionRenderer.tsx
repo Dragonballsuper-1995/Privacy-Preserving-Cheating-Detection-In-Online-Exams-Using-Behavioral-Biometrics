@@ -6,7 +6,7 @@
 'use client';
 
 import { Question } from '@/lib/api';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 // Dynamically import CodeEditor to avoid SSR issues with Monaco
@@ -62,7 +62,6 @@ export function MCQQuestion({ question, answer, onAnswerChange }: QuestionProps)
 export function SubjectiveQuestion({ question, answer, onAnswerChange }: QuestionProps) {
     const wordCount = answer ? answer.trim().split(/\s+/).filter(word => word.length > 0).length : 0;
 
-    const isUnderMin = question.min_words && wordCount < question.min_words;
     const isOverMax = question.max_words && wordCount > question.max_words;
 
     return (
@@ -75,13 +74,10 @@ export function SubjectiveQuestion({ question, answer, onAnswerChange }: Questio
                 className="w-full h-48 p-4 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:bg-gray-800 dark:border-gray-700 dark:text-white resize-none transition-all"
             />
             <div className="flex items-center justify-between text-sm">
-                <span className={`${isUnderMin ? 'text-orange-500' : isOverMax ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'
-                    }`}>
+                <span className={`${isOverMax ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
                     {wordCount} words
-                    {question.min_words && ` (min: ${question.min_words})`}
                     {question.max_words && ` (max: ${question.max_words})`}
                 </span>
-                {isUnderMin && <span className="text-orange-500">⚠️ Below minimum word count</span>}
                 {isOverMax && <span className="text-red-500">❌ Exceeds maximum word count</span>}
             </div>
         </div>
@@ -94,21 +90,98 @@ export function CodingQuestion({ question, answer, onAnswerChange }: QuestionPro
     const [isRunning, setIsRunning] = useState(false);
     const [activeTab, setActiveTab] = useState<'code' | 'output'>('code');
 
+    // Clear output when question changes
+    useEffect(() => {
+        setOutput('');
+        setActiveTab('code');
+    }, [question.id]);
+
     const runCode = useCallback(async () => {
         setIsRunning(true);
         setActiveTab('output');
+        setOutput('⏳ Running tests...');
 
-        // Simulate code execution (in production, this would call the backend)
         try {
-            // For now, just show a message
-            await new Promise(resolve => setTimeout(resolve, 500));
-            setOutput(`✓ Code received. Execution will be performed on submission.\n\nYour code:\n${'-'.repeat(40)}\n${answer.substring(0, 500)}${answer.length > 500 ? '...' : ''}`);
-        } catch {
-            setOutput('Error running code. Please try again.');
+            // Get test cases from the question
+            const testCases = question.test_cases || [];
+
+            if (testCases.length === 0) {
+                // No test cases - just execute the code
+                const { executeCode } = await import('@/lib/api');
+                const result = await executeCode(
+                    answer,
+                    question.language || 'python',
+                    5
+                );
+
+                if (result.success) {
+                    let output = '';
+                    if (result.stdout) {
+                        output += `📤 Output:\n${result.stdout}`;
+                    }
+                    if (!output) {
+                        output = '✅ Code executed successfully (no output)';
+                    }
+                    output += `\n\n⏱️ Execution time: ${result.execution_time}s`;
+                    setOutput(output);
+                } else {
+                    let errorOutput = '❌ Execution failed\n\n';
+                    if (result.error) {
+                        errorOutput += `Error: ${result.error}\n`;
+                    }
+                    if (result.stderr) {
+                        errorOutput += `\n${result.stderr}`;
+                    }
+                    setOutput(errorOutput);
+                }
+            } else {
+                // Run against test cases
+                const { runTests } = await import('@/lib/api');
+
+                // Extract function name from code template (look for "def function_name")
+                const funcMatch = (question.code_template || answer).match(/def\s+(\w+)\s*\(/);
+                const functionName = funcMatch ? funcMatch[1] : 'solution';
+
+                const result = await runTests(
+                    answer,
+                    functionName,
+                    testCases.map(tc => ({ input: tc.input, expected: tc.expected })),
+                    question.language || 'python',
+                    5
+                );
+
+                // Build output showing each test case result
+                const outputLines: string[] = [];
+
+                if (result.error) {
+                    outputLines.push(`❌ Error: ${result.error}\n`);
+                }
+
+                outputLines.push(`📊 Test Results: ${result.passed}/${result.total} passed\n`);
+                outputLines.push('─'.repeat(50) + '\n');
+
+                result.results.forEach((tr, idx) => {
+                    const icon = tr.passed ? '✅' : '❌';
+                    outputLines.push(`${icon} Test ${idx + 1}:`);
+                    outputLines.push(`   Input:    ${JSON.stringify(tr.input)}`);
+                    outputLines.push(`   Expected: ${JSON.stringify(tr.expected)}`);
+                    outputLines.push(`   Actual:   ${JSON.stringify(tr.actual)}`);
+                    if (tr.error) {
+                        outputLines.push(`   Error:    ${tr.error}`);
+                    }
+                    outputLines.push('');
+                });
+
+                outputLines.push(`⏱️ Execution time: ${result.execution_time}s`);
+
+                setOutput(outputLines.join('\n'));
+            }
+        } catch (error) {
+            setOutput(`❌ Error running code: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsRunning(false);
         }
-    }, [answer]);
+    }, [answer, question.language, question.test_cases, question.code_template]);
 
     const resetCode = useCallback(() => {
         if (question.code_template) {

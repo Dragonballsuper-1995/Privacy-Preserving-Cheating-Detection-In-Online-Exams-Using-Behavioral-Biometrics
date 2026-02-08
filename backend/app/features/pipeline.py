@@ -30,6 +30,11 @@ from app.features.focus import (
     calculate_focus_score,
     FocusFeatures
 )
+from app.features.text_analysis import (
+    TextAnalyzer,
+    TextFeatures,
+    get_text_suspicion_score
+)
 from app.core.config import settings
 
 
@@ -44,12 +49,14 @@ class SessionFeatures:
     hesitation: HesitationFeatures = field(default_factory=HesitationFeatures)
     paste: PasteFeatures = field(default_factory=PasteFeatures)
     focus: FocusFeatures = field(default_factory=FocusFeatures)
+    text: TextFeatures = field(default_factory=TextFeatures)
     
     # Individual scores
     typing_score: float = 0.0
     hesitation_score: float = 0.0
     paste_score: float = 0.0
     focus_score: float = 0.0
+    text_score: float = 0.0
     
     # Combined score
     overall_score: float = 0.0
@@ -64,10 +71,12 @@ class SessionFeatures:
             "hesitation": self.hesitation.to_dict(),
             "paste": self.paste.to_dict(),
             "focus": self.focus.to_dict(),
+            "text": self.text.to_dict(),
             "typing_score": self.typing_score,
             "hesitation_score": self.hesitation_score,
             "paste_score": self.paste_score,
             "focus_score": self.focus_score,
+            "text_score": self.text_score,
             "overall_score": self.overall_score,
             "is_flagged": self.is_flagged,
             "flag_reasons": self.flag_reasons,
@@ -84,10 +93,11 @@ class FeatureExtractor:
     
     # Risk score weights (based on research and tuning)
     WEIGHTS = {
-        "typing": 0.25,
-        "hesitation": 0.25,
-        "paste": 0.30,
-        "focus": 0.20,
+        "typing": 0.20,
+        "hesitation": 0.20,
+        "paste": 0.25,
+        "focus": 0.15,
+        "text": 0.20,  # Text-based analysis weight
     }
     
     def __init__(
@@ -136,6 +146,24 @@ class FeatureExtractor:
         features.paste = extract_paste_features(events)
         features.focus = extract_focus_features(events)
         
+        # Extract text features from answer events
+        text_analyzer = TextAnalyzer()
+        answers = {}
+        for event in events:
+            if event.get("event_type") == "answer_submit":
+                q_id = event.get("question_id", "unknown")
+                content = event.get("data", {}).get("content", "")
+                if content:
+                    answers[q_id] = content
+        
+        if answers:
+            # Analyze all answers and get aggregate score
+            features.text_score = text_analyzer.get_aggregate_score(answers)
+            # Get detailed features from largest answer
+            largest_answer = max(answers.values(), key=len, default="")
+            if largest_answer:
+                features.text = text_analyzer.analyze_text(largest_answer)
+        
         # Calculate individual scores
         features.typing_score = keystroke_anomaly_score(features.keystroke)
         features.hesitation_score = calculate_hesitation_score(features.hesitation)
@@ -147,11 +175,24 @@ class FeatureExtractor:
             self.WEIGHTS["typing"] * features.typing_score +
             self.WEIGHTS["hesitation"] * features.hesitation_score +
             self.WEIGHTS["paste"] * features.paste_score +
-            self.WEIGHTS["focus"] * features.focus_score
+            self.WEIGHTS["focus"] * features.focus_score +
+            self.WEIGHTS["text"] * features.text_score
         )
         
-        # Determine if flagged
-        features.is_flagged = features.overall_score >= self.risk_threshold
+        # Determine if flagged - either overall threshold OR any individual score is very high
+        individual_threshold = getattr(settings, 'individual_score_threshold', 0.60)
+        
+        # Flag if overall score exceeds threshold
+        is_over_threshold = features.overall_score >= self.risk_threshold
+        
+        # Also flag if any individual score is very high (clear cheating indicator)
+        has_high_individual = (
+            features.paste_score >= individual_threshold or
+            features.focus_score >= individual_threshold or
+            features.hesitation_score >= individual_threshold
+        )
+        
+        features.is_flagged = is_over_threshold or has_high_individual
         
         # Generate flag reasons
         features.flag_reasons = self._generate_flag_reasons(features)
@@ -191,6 +232,14 @@ class FeatureExtractor:
                 reasons.append(f"Tab switching detected: {features.focus.blur_count} times")
             if features.focus.extended_absences >= 1:
                 reasons.append(f"Extended absence: {features.focus.extended_absences} periods > 30s")
+        
+        # Text analysis concerns
+        if features.text_score >= 0.3:
+            # Include reasons from text analysis
+            if features.text.flag_reasons:
+                reasons.extend(features.text.flag_reasons[:2])  # Include up to 2 text-based reasons
+            elif features.text.suspicion_score >= 0.5:
+                reasons.append("Suspicious writing patterns detected in answers")
         
         return reasons
     
