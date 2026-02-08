@@ -179,51 +179,68 @@ def generate_training_data(
 
 def train_ml_models(
     n_samples: int = 1000,
-    save_data: bool = True
+    save_data: bool = True,
+    use_real_data: bool = True
 ) -> Dict[str, float]:
     """
     Generate training data and train ML models.
     
     Args:
-        n_samples: Total number of samples (split 50/50)
+        n_samples: Total number of samples (split 50/50) for synthetic only
         save_data: Whether to save training data
+        use_real_data: Whether to use real datasets (BB-MAS, etc.)
         
     Returns:
         Training metrics
     """
     from app.ml.predictor import MLPredictor
     
-    n_each = n_samples // 2
+    print("=" * 50)
+    print("ML MODEL TRAINING")
+    print("=" * 50)
     
-    # Generate data
-    print(f"Generating {n_each} honest and {n_each} cheating sessions...")
+    if use_real_data:
+        # Use real data loader
+        from app.ml.data_loader import load_all_training_data
+        print("\nLoading real datasets (BB-MAS, exam behavior, etc.)...")
+        training_data = load_all_training_data()
+    else:
+        # Use purely synthetic data
+        n_each = n_samples // 2
+        print(f"\nGenerating {n_each} honest and {n_each} cheating sessions...")
+        
+        save_path = None
+        if save_data:
+            save_path = os.path.join(settings.data_dir, "training_data.json")
+        
+        training_data = generate_training_data(
+            n_honest=n_each,
+            n_cheating=n_each,
+            save_path=save_path
+        )
     
-    save_path = None
-    if save_data:
-        save_path = os.path.join(settings.data_dir, "training_data.json")
-    
-    training_data = generate_training_data(
-        n_honest=n_each,
-        n_cheating=n_each,
-        save_path=save_path
-    )
-    
-    print(f"Generated {len(training_data)} training samples")
+    print(f"\nTotal training samples: {len(training_data)}")
+    n_clean = sum(1 for _, label in training_data if label == 0)
+    n_cheat = sum(1 for _, label in training_data if label == 1)
+    print(f"  Clean: {n_clean}")
+    print(f"  Cheating: {n_cheat}")
     
     # Train models
-    print("Training ML models...")
+    print("\nTraining Random Forest + Isolation Forest...")
     predictor = MLPredictor()
     metrics = predictor.train(training_data, save_after=True)
     
-    print(f"Training complete!")
+    print("\n" + "=" * 50)
+    print("TRAINING COMPLETE!")
+    print("=" * 50)
     print(f"  Accuracy: {metrics['accuracy']:.1%}")
-    print(f"  Samples: {metrics['n_samples']}")
-    print(f"  Cheating: {metrics['n_cheating']}")
-    print(f"  Clean: {metrics['n_clean']}")
+    print(f"  Total samples: {metrics['n_samples']}")
+    print(f"  Cheating samples: {metrics['n_cheating']}")
+    print(f"  Clean samples: {metrics['n_clean']}")
     
     return metrics
 
 
 if __name__ == "__main__":
-    # Run training when executed directly
-    train_ml_models(n_samples=1000, save_data=True)
+    # Run training with real data when executed directly
+    train_ml_models(use_real_data=True, save_data=True)
