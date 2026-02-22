@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# testing output
+/playwright-report/
+/test-results/
+
+# local logs & assets
+lint_output.txt
+frontend-error-state.png

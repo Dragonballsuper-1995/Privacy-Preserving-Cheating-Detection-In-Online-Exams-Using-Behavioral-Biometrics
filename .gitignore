@@ -16,7 +16,6 @@ node_modules/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
-frontend/out/
 logs/
 *.log
 npm-debug.log*
@@ -57,3 +56,26 @@ backend/data/results/visualizations/*.svg
 .DS_Store
 Thumbs.db
 *.tmp
+
+.env.production
+.env.staging
+models/
+Admin Creds.md
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Test Coverage
+htmlcov/
+*.sqlite
+*.sqlite3
+
+# AI Assistant Caches & Configs
+.agent/
+.agents/
+skills-lock.json
+
+# UI Screens
+stitch_screens/

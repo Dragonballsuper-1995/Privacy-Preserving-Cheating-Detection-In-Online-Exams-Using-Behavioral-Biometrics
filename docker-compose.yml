@@ -50,12 +50,15 @@ services:
       args:
         PYTHON_VERSION: 3.12
     container_name: cheating-detector-backend
+    env_file:
+      - .env.example
+      - .env
     environment:
       # Database
-      DATABASE_URL: postgresql://${DB_USER:-cheating_user}:${DB_PASSWORD}@db:5432/${DB_NAME:-cheating_detector}
+      DATABASE_URL: postgresql://${DB_USER:-cheating_user}:${DB_PASSWORD:-CHANGE_ME_SECURE_PASSWORD_HERE}@db:5432/${DB_NAME:-cheating_detector}
       
       # Redis
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD:-CHANGE_ME_REDIS_PASSWORD_HERE}@redis:6379/0
       
       # Security
       SECRET_KEY: ${SECRET_KEY}
@@ -103,18 +106,22 @@ services:
         NODE_ENV: production
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     container_name: cheating-detector-frontend
+    env_file:
+      - .env.example
+      - .env
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000/ws}
     ports:
-      - "3000:3000"
+      - "3000:10000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - cheating-detector-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "curl", "-f", "http://localhost:10000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
