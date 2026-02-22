@@ -122,7 +122,24 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-### 2. Backend Setup
+### 🐳 Run with Docker (Recommended for New Machines)
+
+The easiest way to run the entire project (Database, Redis, Backend, Frontend) is using Docker Compose:
+
+```bash
+docker-compose up -d --build
+```
+*That's it!* The frontend will be available at `http://localhost:3000` and the API at `http://localhost:8000`.
+
+### ⚡ One-Click Startup (Windows)
+
+To start both backend and frontend servers locally with a single command:
+
+```bash
+.\start_all.bat
+```
+
+### 3. Manual Backend Setup
 
 ```bash
 cd backend
@@ -156,24 +173,28 @@ npm run dev
 ```
 Cheating-Detector/
 ├── backend/
+│   ├── alembic/       # Database migrations
 │   ├── app/
-│   │   ├── api/           # FastAPI routers
-│   │   ├── features/      # Feature extraction modules
-│   │   ├── ml/            # ML models (anomaly, fusion)
-│   │   └── models/        # Pydantic/SQLAlchemy models
-│   ├── data/datasets/     # Training datasets
-│   ├── tests/             # pytest test suite
+│   │   ├── api/       # FastAPI routers (events, auth, exams, dashboard, etc.)
+│   │   ├── core/      # Config, security, and database setup
+│   │   ├── features/  # Feature extraction modules
+│   │   ├── ml/        # ML models (anomaly, fusion, similarity)
+│   │   └── models/    # Pydantic/SQLAlchemy models
+│   ├── data/datasets/ # Training datasets
+│   ├── models/        # Trained ML models (.pkl)
+│   ├── notebooks/     # Data exploration/training notebooks
+│   ├── tests/         # pytest test suite
 │   └── requirements.txt
+├── docs/              # Additional project documentation
 ├── frontend/
 │   ├── src/
-│   │   ├── app/           # Next.js pages
-│   │   ├── components/    # React components
-│   │   ├── hooks/         # Custom hooks (useBehaviorLogger)
-│   │   └── lib/           # API utilities
+│   │   ├── app/       # Next.js pages
+│   │   ├── components/# React components
+│   │   ├── hooks/     # Custom hooks (useBehaviorLogger)
+│   │   └── lib/       # API utilities
 │   └── package.json
-├── models/                # Trained ML models (.pkl)
-├── docker-compose.yml     # Production deployment
-└── nginx/                 # Reverse proxy config
+├── docker-compose.yml # Production deployment
+└── nginx/             # Reverse proxy config
 ```
 
 ---
@@ -182,14 +203,14 @@ Cheating-Detector/
 
 | Document | Description |
 |----------|-------------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System design and module communication |
-| [API.md](API.md) | Complete REST API reference |
-| [DATASETS.md](DATASETS.md) | Training data sources and structure |
-| [TESTING.md](TESTING.md) | Test suite and coverage |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Docker and production setup |
-| [ADMIN_DASHBOARD.md](ADMIN_DASHBOARD.md) | Admin features guide |
-| [RESEARCH_GUIDE.md](RESEARCH_GUIDE.md) | Theoretical approach |
-| [RESULTS.md](RESULTS.md) | Performance metrics |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and module communication |
+| [API.md](docs/API.md) | Complete REST API reference |
+| [DATASETS.md](docs/DATASETS.md) | Training data sources and structure |
+| [TESTING.md](docs/TESTING.md) | Test suite and coverage |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Docker and production setup |
+| [ADMIN_DASHBOARD.md](docs/ADMIN_DASHBOARD.md) | Admin features guide |
+| [RESEARCH_GUIDE.md](docs/RESEARCH_GUIDE.md) | Theoretical approach |
+| [RESULTS.md](docs/RESULTS.md) | Performance metrics |
 
 ---
 
