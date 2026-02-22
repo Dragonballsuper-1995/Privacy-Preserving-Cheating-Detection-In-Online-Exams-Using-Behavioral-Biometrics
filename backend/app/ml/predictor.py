@@ -69,42 +69,7 @@ class MLPredictor:
     3. Temporal burst pattern detection for additional context
     """
     
-    # Feature names in order (must match training)
-    FEATURE_NAMES = [
-        # Raw scores
-        "typing_score",
-        "hesitation_score", 
-        "paste_score",
-        "focus_score",
-        "text_score",
-        # Derived features
-        "paste_after_blur_ratio",
-        "burst_density",
-        "typing_consistency",
-        "paste_to_typing_ratio",
-        "absence_concentration",
-        # Amplified scores
-        "paste_score_amplified",
-        "focus_score_amplified",
-        "hesitation_score_amplified",
-    ]
-    
-    # Feature importance weights (learned from training or preset)
-    FEATURE_IMPORTANCE = {
-        "paste_score_amplified": 0.18,
-        "paste_after_blur_ratio": 0.16,
-        "focus_score_amplified": 0.14,
-        "burst_density": 0.12,
-        "paste_score": 0.10,
-        "focus_score": 0.08,
-        "hesitation_score_amplified": 0.07,
-        "paste_to_typing_ratio": 0.05,
-        "typing_score": 0.04,
-        "hesitation_score": 0.03,
-        "absence_concentration": 0.02,
-        "typing_consistency": 0.01,
-        "text_score": 0.00,
-    }
+    # Feature names not needed as we use DictVectorizer
     
     def __init__(
         self,
@@ -119,47 +84,84 @@ class MLPredictor:
             model_path: Directory to load/save models
         """
         self.flag_threshold = flag_threshold
-        self.model_path = model_path or os.path.join(settings.models_dir, "ml_predictor")
+        # Default to the main models directory where train_model.py saves
+        # We try multiple common paths to be robust
+        possible_paths = [
+            os.path.join("backend", "app", "ml", "models"),
+            os.path.join("app", "ml", "models"),
+            os.path.join(os.getcwd(), "backend", "app", "ml", "models"),
+        ]
+        
+        self.model_path = model_path
+        if not self.model_path:
+            for path in possible_paths:
+                if os.path.exists(path):
+                    self.model_path = path
+                    break
+            
+            # Fallback if nothing found
+            if not self.model_path:
+                 self.model_path = possible_paths[0]
         
         # Initialize models
         self.rf_model: Optional[RandomForestClassifier] = None
         self.if_model: Optional[IsolationForest] = None
         self.scaler: Optional[StandardScaler] = None
+        self.vectorizer: Optional[Any] = None
+        self.imputer: Optional[Any] = None
         self.is_trained = False
         
         # Try to load existing models
         self._load_models()
     
+    def _flatten_features(self, features_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """Flatten nested dictionary features to match training data format."""
+        flat = {}
+        for key, value in features_dict.items():
+            if isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, (int, float, bool)):
+                        if isinstance(sub_value, bool):
+                            sub_value = int(sub_value)
+                        flat[f"{key}_{sub_key}"] = sub_value
+            elif isinstance(value, (int, float, bool)):
+                if isinstance(value, bool):
+                     value = int(value)
+                flat[key] = value
+        return flat
+
     def features_to_vector(
         self,
         raw_features: Dict[str, Any],
         derived: Optional[DerivedFeatures] = None
-    ) -> np.ndarray:
+    ) -> Any:
         """
-        Convert features to numpy vector for ML models.
+        Convert features to vector using the trained DictVectorizer.
         
         Args:
             raw_features: Dictionary from SessionFeatures.to_dict()
             derived: Pre-computed derived features (optional)
             
         Returns:
-            Numpy array of feature values
+            Sparse matrix or numpy array of feature values
         """
-        # Extract derived features if not provided
-        if derived is None:
-            derived = extract_derived_features(raw_features)
+        # Flatten features first
+        flat_features = self._flatten_features(raw_features)
         
-        derived_dict = derived.to_dict()
+        # Add derived features if available
+        if derived:
+            flat_features.update(derived.to_dict())
+            
+        # Use vectorizer if available
+        if self.vectorizer:
+            try:
+                # Transform returns a sparse matrix
+                return self.vectorizer.transform([flat_features])
+            except Exception as e:
+                logger.error(f"Vectorization failed: {e}")
+                return None
         
-        # Build vector in consistent order
-        vector = []
-        for name in self.FEATURE_NAMES:
-            if name in derived_dict:
-                vector.append(derived_dict[name])
-            else:
-                vector.append(raw_features.get(name, 0.0))
-        
-        return np.array(vector).reshape(1, -1)
+        return None
     
     def predict(
         self,
@@ -169,20 +171,9 @@ class MLPredictor:
     ) -> MLPrediction:
         """
         Make ML-based prediction on a session.
-        
-        Args:
-            raw_features: Dictionary from SessionFeatures.to_dict()
-            events: Optional list of raw events for burst detection
-            session_id: Session identifier
-            
-        Returns:
-            MLPrediction with probability and flags
         """
         # Extract derived features
         derived = extract_derived_features(raw_features, events)
-        
-        # Convert to vector
-        vector = self.features_to_vector(raw_features, derived)
         
         # Get burst bonus if events provided
         burst_bonus = 0.0
@@ -200,45 +191,65 @@ class MLPredictor:
         anomaly_detected = False
         anomaly_reasons = []
         
-        if self.is_trained and self.rf_model and self.scaler:
-            # Use trained models
-            scaled = self.scaler.transform(vector)
-            
-            # Random Forest probability
+        # Check if we have a valid pipeline
+        vector = self.features_to_vector(raw_features, derived)
+        
+        if self.is_trained and vector is not None:
             try:
-                rf_proba = self.rf_model.predict_proba(scaled)
-                rf_score = rf_proba[0][1]  # Probability of class 1 (cheating)
-            except Exception as e:
-                logger.warning(f"RF prediction failed: {e}")
-                rf_score = self._heuristic_score(raw_features, derived)
-            
-            # Isolation Forest anomaly
-            if self.if_model:
-                try:
+                # 1. Impute (if needed)
+                if self.imputer:
+                    vector = self.imputer.transform(vector)
+                
+                # 2. Scale
+                if self.scaler:
+                    scaled = self.scaler.transform(vector)
+                else:
+                    scaled = vector
+                
+                # 3. Random Forest probability
+                if self.rf_model:
+                    rf_proba = self.rf_model.predict_proba(scaled)
+                    rf_score = rf_proba[0][1]  # Probability of class 1 (cheating)
+                
+                # 4. Isolation Forest (not currently trained in train_model.py, but if it exists)
+                if self.if_model:
                     if_pred = self.if_model.score_samples(scaled)
                     # Convert to 0-1 range (lower IF score = more anomalous)
-                    if_score = 1 - (if_pred[0] + 0.5)  # Rough normalization
-                    if_score = max(0, min(1, if_score))
-                    anomaly_detected = if_pred[0] < -0.3  # Anomaly threshold
-                except Exception as e:
-                    logger.warning(f"IF prediction failed: {e}")
+                    # Score samples is typically negative for anomalies.
+                    # e.g. -0.5 (anomaly) -> 0.75
+                    # e.g. 0.5 (normal) -> 0.25
+                    norm_score = 0.5 - (if_pred[0] / 2) # Rough normalization
+                    if_score = max(0, min(1, norm_score))
+                    anomaly_detected = if_pred[0] < -0.6  # Conservative threshold
+            except Exception as e:
+                logger.warning(f"ML prediction failed: {e}")
+                rf_score = self._heuristic_score(raw_features, derived)
         else:
             # Use heuristic fallback
             rf_score = self._heuristic_score(raw_features, derived)
             if_score = self._check_extreme_values(raw_features)
-            anomaly_detected = if_score > 0.7
+            # anomaly_detected = if_score > 0.7 
+            # Disable anomaly detection in fallback to avoid false positives on new data
+            anomaly_detected = False 
         
         # Check for extreme single metrics (always flag these)
         if not anomaly_detected:
             anomaly_detected, anomaly_reasons = self._detect_single_metric_anomalies(raw_features)
         
         # Combine scores
-        # Weight: RF 50%, IF 25%, Burst 25%
-        combined_score = (
-            rf_score * 0.50 +
-            if_score * 0.25 +
-            burst_bonus * 0.25
-        )
+        # Weight: RF 60%, IF 20%, Burst 20%
+        # If no IF model, redistrubute to RF
+        if self.if_model:
+            combined_score = (
+                rf_score * 0.60 +
+                if_score * 0.20 +
+                burst_bonus * 0.20
+            )
+        else:
+             combined_score = (
+                rf_score * 0.80 +
+                burst_bonus * 0.20
+            )
         
         # Boost if anomaly detected
         if anomaly_detected:
@@ -255,20 +266,20 @@ class MLPredictor:
         else:
             confidence = "low"
         
-        # Get top contributing features
+        # Get top contributing features (approximate since we use sparse vector)
         top_features = self._get_top_features(raw_features, derived)
         
         return MLPrediction(
-            probability=round(final_probability, 3),
+            probability=float(round(final_probability, 3)),
             confidence=confidence,
-            is_flagged=final_probability >= self.flag_threshold,
+            is_flagged=bool(final_probability >= self.flag_threshold),
             top_features=top_features,
-            anomaly_detected=anomaly_detected,
+            anomaly_detected=bool(anomaly_detected),
             anomaly_reasons=anomaly_reasons,
             burst_patterns=burst_patterns,
-            raw_rf_score=round(rf_score, 3),
-            raw_if_score=round(if_score, 3),
-            burst_bonus=round(burst_bonus, 3),
+            raw_rf_score=float(round(rf_score, 3)),
+            raw_if_score=float(round(if_score, 3)),
+            burst_bonus=float(round(burst_bonus, 3)),
         )
     
     def _heuristic_score(
@@ -371,123 +382,48 @@ class MLPredictor:
         
         return [f"{name}: {value:.0%}" for name, value in sorted_features[:3] if value > 0.3]
     
-    def train(
-        self,
-        training_data: List[Tuple[Dict[str, Any], int]],
-        save_after: bool = True
-    ) -> Dict[str, float]:
-        """
-        Train the ML models on labeled data.
-        
-        Args:
-            training_data: List of (features_dict, label) tuples
-                - features_dict: From SessionFeatures.to_dict()
-                - label: 0 (clean) or 1 (cheating)
-            save_after: Whether to save models after training
-            
-        Returns:
-            Training metrics (accuracy, etc.)
-        """
-        if len(training_data) < 10:
-            raise ValueError("Need at least 10 samples for training")
-        
-        # Extract features and labels
-        X = []
-        y = []
-        
-        for features, label in training_data:
-            derived = extract_derived_features(features)
-            vector = self.features_to_vector(features, derived)
-            X.append(vector.flatten())
-            y.append(label)
-        
-        X = np.array(X)
-        y = np.array(y)
-        
-        # Initialize scaler
-        self.scaler = StandardScaler()
-        X_scaled = self.scaler.fit_transform(X)
-        
-        # Train Random Forest with calibration for better probabilities
-        base_rf = RandomForestClassifier(
-            n_estimators=100,
-            max_depth=10,
-            min_samples_split=5,
-            random_state=42
-        )
-        self.rf_model = CalibratedClassifierCV(base_rf, cv=3)
-        self.rf_model.fit(X_scaled, y)
-        
-        # Train Isolation Forest on "clean" samples only
-        clean_samples = X_scaled[y == 0]
-        if len(clean_samples) >= 5:
-            self.if_model = IsolationForest(
-                contamination=0.1,
-                random_state=42
-            )
-            self.if_model.fit(clean_samples)
-        
-        self.is_trained = True
-        
-        # Calculate training accuracy
-        predictions = self.rf_model.predict(X_scaled)
-        accuracy = (predictions == y).mean()
-        
-        # Save models
-        if save_after:
-            self._save_models()
-        
-        return {
-            "accuracy": accuracy,
-            "n_samples": len(training_data),
-            "n_cheating": int(y.sum()),
-            "n_clean": int((y == 0).sum()),
-        }
+    # Train method removed - training is done via train_model.py
     
     def _save_models(self):
-        """Save trained models to disk."""
-        os.makedirs(self.model_path, exist_ok=True)
-        
-        if self.rf_model:
-            with open(os.path.join(self.model_path, "rf_model.pkl"), "wb") as f:
-                pickle.dump(self.rf_model, f)
-        
-        if self.if_model:
-            with open(os.path.join(self.model_path, "if_model.pkl"), "wb") as f:
-                pickle.dump(self.if_model, f)
-        
-        if self.scaler:
-            with open(os.path.join(self.model_path, "scaler.pkl"), "wb") as f:
-                pickle.dump(self.scaler, f)
-        
-        logger.info(f"ML models saved to {self.model_path}")
+        """Save models - legacy support."""
+        pass
     
     def _load_models(self):
         """Load trained models from disk."""
-        rf_path = os.path.join(self.model_path, "rf_model.pkl")
-        if_path = os.path.join(self.model_path, "if_model.pkl")
-        scaler_path = os.path.join(self.model_path, "scaler.pkl")
+        import joblib
+        
+        rf_path = os.path.join(self.model_path, "rf_model_latest.pkl")
+        if_path = os.path.join(self.model_path, "if_model.pkl") # Use IF if exists (optional)
+        scaler_path = os.path.join(self.model_path, "scaler_latest.pkl")
+        vectorizer_path = os.path.join(self.model_path, "vectorizer_latest.pkl")
+        imputer_path = os.path.join(self.model_path, "imputer_latest.pkl")
         
         try:
             if os.path.exists(rf_path):
-                with open(rf_path, "rb") as f:
-                    self.rf_model = pickle.load(f)
-                    
+                self.rf_model = joblib.load(rf_path)
+            
+            # optional IF
             if os.path.exists(if_path):
-                with open(if_path, "rb") as f:
-                    self.if_model = pickle.load(f)
+                 self.if_model = joblib.load(if_path)
                     
             if os.path.exists(scaler_path):
-                with open(scaler_path, "rb") as f:
-                    self.scaler = pickle.load(f)
+                self.scaler = joblib.load(scaler_path)
+
+            if os.path.exists(vectorizer_path):
+                self.vectorizer = joblib.load(vectorizer_path)
+                
+            if os.path.exists(imputer_path):
+                self.imputer = joblib.load(imputer_path)
             
             self.is_trained = (
                 self.rf_model is not None and 
-                self.scaler is not None
+                self.vectorizer is not None
             )
             
             if self.is_trained:
                 logger.info(f"ML models loaded from {self.model_path}")
+            else:
+                logger.warning(f"Could not load ML models from {self.model_path}, using mode: HEURISTIC")
                 
         except Exception as e:
             logger.warning(f"Could not load ML models: {e}")
@@ -513,14 +449,7 @@ def predict_cheating(
 ) -> MLPrediction:
     """
     Convenience function for ML-based prediction.
-    
-    Args:
-        features: Dictionary from SessionFeatures.to_dict()
-        events: Optional raw events for burst detection
-        session_id: Session identifier
-        
-    Returns:
-        MLPrediction with probability and flags
     """
     predictor = get_predictor()
     return predictor.predict(features, events, session_id)
+

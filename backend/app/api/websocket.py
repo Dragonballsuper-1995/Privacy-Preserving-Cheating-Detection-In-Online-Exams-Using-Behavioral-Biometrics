@@ -7,10 +7,11 @@ Provides real-time updates for exam sessions, risk scores, and alerts.
 from typing import Dict, Set
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
 import json
+import os
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
-from app.core.auth import get_current_user, User
+from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -90,7 +91,7 @@ class ConnectionManager:
         message = {
             "type": "alert",
             "session_id": session_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             **alert_data
         }
         
@@ -134,7 +135,7 @@ async def websocket_session_monitor(
                     # Respond to ping with pong
                     await websocket.send_json({
                         "type": "pong",
-                        "timestamp": datetime.utcnow().isoformat()
+                        "timestamp": datetime.now(timezone.utc).isoformat()
                     })
                 
                 elif action == "subscribe":
@@ -142,7 +143,7 @@ async def websocket_session_monitor(
                     await websocket.send_json({
                         "type": "subscribed",
                         "session_id": session_id,
-                        "timestamp": datetime.utcnow().isoformat()
+                        "timestamp": datetime.now(timezone.utc).isoformat()
                     })
                 
             except json.JSONDecodeError:
@@ -175,14 +176,14 @@ async def websocket_admin_monitor(websocket: WebSocket):
                 if action == "ping":
                     await websocket.send_json({
                         "type": "pong",
-                        "timestamp": datetime.utcnow().isoformat()
+                        "timestamp": datetime.now(timezone.utc).isoformat()
                     })
                 
                 elif action == "subscribe_all":
                     await websocket.send_json({
                         "type": "subscribed",
                         "mode": "admin",
-                        "timestamp": datetime.utcnow().isoformat()
+                        "timestamp": datetime.now(timezone.utc).isoformat()
                     })
             
             except json.JSONDecodeError:
@@ -195,6 +196,53 @@ async def websocket_admin_monitor(websocket: WebSocket):
         manager.disconnect(websocket, is_admin=True)
 
 
+@router.websocket("/ws/stream-events/{session_id}")
+async def websocket_event_stream(websocket: WebSocket, session_id: str):
+    """
+    WebSocket endpoint for students to stream behavior events in real-time.
+    These events are logged to the session's JSONL file and broadcast to admins.
+    """
+    await websocket.accept()
+    log_file = os.path.join(settings.event_logs_dir, f"session_{session_id}.jsonl")
+    
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                message = json.loads(data)
+                events = message.get("events", [])
+                if not events:
+                    continue
+                
+                # Write to log file
+                with open(log_file, 'a') as f:
+                    for event in events:
+                        # Ensure basic fields exist
+                        event["session_id"] = session_id
+                        event["logged_at"] = datetime.now(timezone.utc).isoformat()
+                        f.write(json.dumps(event) + "\n")
+                
+                # Broadcast real-time events to observers (admins)
+                update_msg = {
+                    "type": "live_events",
+                    "session_id": session_id,
+                    "events": events,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+                await manager.broadcast_to_session(session_id, update_msg)
+                await manager.broadcast_to_admins(update_msg)
+                
+            except json.JSONDecodeError:
+                pass
+            except Exception as e:
+                logger.error("Error processing streamed events", error=str(e))
+                
+    except WebSocketDisconnect:
+        pass
+
+
+
+
 # Helper functions for broadcasting updates
 
 async def broadcast_risk_update(session_id: str, risk_score: float, risk_level: str):
@@ -204,7 +252,7 @@ async def broadcast_risk_update(session_id: str, risk_score: float, risk_level: 
         "session_id": session_id,
         "risk_score": risk_score,
         "risk_level": risk_level,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
     
     # Also send to admins
@@ -213,7 +261,7 @@ async def broadcast_risk_update(session_id: str, risk_score: float, risk_level: 
         "session_id": session_id,
         "risk_score": risk_score,
         "risk_level": risk_level,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
 
 
@@ -223,7 +271,7 @@ async def broadcast_session_status(session_id: str, status: str, details: dict =
         "type": "status_update",
         "session_id": session_id,
         "status": status,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
     
     if details:
@@ -250,7 +298,7 @@ async def periodic_heartbeat():
         
         message = {
             "type": "heartbeat",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
         # Send to all admin connections

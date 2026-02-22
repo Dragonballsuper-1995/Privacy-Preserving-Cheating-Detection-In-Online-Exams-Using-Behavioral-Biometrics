@@ -5,7 +5,7 @@ Sessions API - Manages exam sessions.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import uuid
 
@@ -80,7 +80,7 @@ async def start_session(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     
     sessions_db[session_id]["status"] = SessionStatus.IN_PROGRESS
-    sessions_db[session_id]["started_at"] = datetime.utcnow().isoformat()
+    sessions_db[session_id]["started_at"] = datetime.now(timezone.utc).isoformat()
     
     return {"message": "Session started", "session_id": session_id}
 
@@ -92,7 +92,7 @@ async def submit_session(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     
     sessions_db[session_id]["status"] = SessionStatus.SUBMITTED
-    sessions_db[session_id]["submitted_at"] = datetime.utcnow().isoformat()
+    sessions_db[session_id]["submitted_at"] = datetime.now(timezone.utc).isoformat()
     
     return {"message": "Exam submitted successfully", "session_id": session_id}
 
@@ -109,7 +109,7 @@ async def submit_answer(session_id: str, answer: SubmitAnswerRequest):
     
     sessions_db[session_id]["answers"][answer.question_id] = {
         "content": answer.content,
-        "submitted_at": datetime.utcnow().isoformat()
+        "submitted_at": datetime.now(timezone.utc).isoformat()
     }
     
     return {"message": "Answer saved", "question_id": answer.question_id}
@@ -124,3 +124,41 @@ async def list_sessions(status: Optional[SessionStatus] = None):
         sessions = [s for s in sessions if s["status"] == status]
     
     return {"sessions": sessions, "count": len(sessions)}
+
+
+@router.get("/{session_id}/result")
+async def get_session_result(session_id: str):
+    """
+    Get session result for the student.
+
+    Returns submission details and answers without exposing
+    risk score or analysis data (those are admin-only).
+    """
+    if session_id not in sessions_db:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session = sessions_db[session_id]
+    answers_raw = session.get("answers", {})
+
+    # Build answer summary (question_id → truncated content + timestamp)
+    answers_summary = []
+    for qid, ans in answers_raw.items():
+        content = ans.get("content", "") if isinstance(ans, dict) else str(ans)
+        submitted_at = ans.get("submitted_at") if isinstance(ans, dict) else None
+        answers_summary.append({
+            "question_id": qid,
+            "answered": bool(content.strip()),
+            "length": len(content),
+            "submitted_at": submitted_at,
+        })
+
+    return {
+        "session_id": session_id,
+        "exam_id": session.get("exam_id", ""),
+        "status": session.get("status", "submitted"),
+        "started_at": session.get("started_at"),
+        "submitted_at": session.get("submitted_at"),
+        "answers": answers_summary,
+        "total_answered": sum(1 for a in answers_summary if a["answered"]),
+        "total_questions": len(answers_summary),
+    }

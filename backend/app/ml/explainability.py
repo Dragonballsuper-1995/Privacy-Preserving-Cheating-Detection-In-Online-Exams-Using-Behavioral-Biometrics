@@ -1,262 +1,332 @@
 """
-Explainable AI with SHAP
+Explainability Module
 
-Provides model interpretability and feature importance explanations.
+Provides feature importance and per-prediction explanations
+for the cheating detection models.
+
+Two modes:
+1. Model-based (always available): uses sklearn feature_importances_ from
+   the trained RandomForest and IsolationForest.
+2. SHAP (optional): uses shap>=0.44 for per-sample TreeExplainer values.
+   Install with:  pip install 'shap>=0.44.0'
 """
 
-from typing import List, Dict, Any, Optional
-import numpy as np
-from dataclasses import dataclass
+from typing import Dict, Any, List, Optional, Tuple
+from dataclasses import dataclass, field
+import logging
+import os
 
+import numpy as np
+
+logger = logging.getLogger(__name__)
+
+# Try to import SHAP — it's optional
 try:
     import shap
     SHAP_AVAILABLE = True
 except ImportError:
     SHAP_AVAILABLE = False
-    print("⚠️ SHAP not installed. Install with: pip install shap")
 
 
 @dataclass
-class Explanation:
-    """Explanation for a prediction."""
-    session_id: str
-    prediction: float
-    feature_impacts: Dict[str, float]  # feature_name -> SHAP value
-    top_positive_features: List[tuple[str, float]]  # Features increasing risk
-    top_negative_features: List[tuple[str, float]]  # Features decreasing risk
-    base_value: float  # Expected model output
-    explanation_text: str
+class FeatureExplanation:
+    """Explanation for a single prediction."""
+    feature_name: str
+    importance: float         # model-level importance (0-1)
+    contribution: float       # per-sample contribution (SHAP value or approx)
+    value: float              # actual feature value for this sample
+    direction: str            # "risk" or "safe"
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "feature": self.feature_name,
+            "importance": round(self.importance, 4),
+            "contribution": round(self.contribution, 4),
+            "value": round(self.value, 4),
+            "direction": self.direction,
+        }
+
+
+@dataclass
+class ExplainabilityResult:
+    """Full explanation result for one session."""
+    session_id: str
+    risk_score: float
+    method: str                 # "shap" or "model_importance"
+    top_features: List[FeatureExplanation] = field(default_factory=list)
+    global_importances: Dict[str, float] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "risk_score": round(self.risk_score, 4),
+            "method": self.method,
+            "top_features": [f.to_dict() for f in self.top_features],
+            "global_importances": {
+                k: round(v, 4)
+                for k, v in sorted(
+                    self.global_importances.items(),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )[:15]
+            },
+        }
+
+
+# ── Global importance from trained models ──
+
+def get_feature_importance_from_model(
+    predictor=None,
+) -> Dict[str, float]:
+    """
+    Extract global feature importances from the trained ML models.
+
+    Works with any sklearn estimator that exposes either
+    `feature_importances_` (tree-based) or `coef_` (linear).
+
+    Returns:
+        Dict mapping feature name -> importance (0-1, normalized).
+    """
+    if predictor is None:
+        from app.ml.predictor import get_predictor
+        predictor = get_predictor()
+
+    if not predictor.is_trained or predictor.rf_model is None:
+        return {}
+
+    rf = predictor.rf_model
+    vectorizer = predictor.vectorizer
+
+    # Get raw importances
+    if hasattr(rf, "feature_importances_"):
+        raw = rf.feature_importances_
+    elif hasattr(rf, "coef_"):
+        raw = np.abs(rf.coef_).flatten()
+    else:
+        return {}
+
+    # Get feature names from the vectorizer
+    if vectorizer is None:
+        feature_names = [f"feature_{i}" for i in range(len(raw))]
+    elif hasattr(vectorizer, "get_feature_names_out"):
+        feature_names = list(vectorizer.get_feature_names_out())
+    elif hasattr(vectorizer, "feature_names_"):
+        feature_names = list(vectorizer.feature_names_)
+    else:
+        feature_names = [f"feature_{i}" for i in range(len(raw))]
+
+    if len(feature_names) != len(raw):
+        # Mismatch — fall back to indexed names
+        feature_names = [f"feature_{i}" for i in range(len(raw))]
+
+    # Normalize to 0-1
+    total = raw.sum()
+    if total > 0:
+        normalized = raw / total
+    else:
+        normalized = raw
+
+    return dict(zip(feature_names, normalized.tolist()))
+
+
+# ── Per-sample explanation ──
 
 def explain_prediction(
-    model,
-    features: Dict[str, Any],
-    feature_names: List[str],
-    session_id: str = ""
-) -> Explanation:
+    raw_features: Dict[str, Any],
+    session_id: str = "",
+    risk_score: float = 0.0,
+    predictor=None,
+    top_n: int = 6,
+) -> ExplainabilityResult:
     """
-    Generate explanation for a model prediction using SHAP.
-    
+    Generate a human-readable explanation for a single prediction.
+
+    Tries SHAP first (if installed); falls back to model importances
+    weighted by the sample's feature values.
+
     Args:
-        model: Trained ML model
-        features: Feature dictionary
-        feature_names: List of feature names
+        raw_features: Feature dict (from SessionFeatures.to_dict())
         session_id: Session identifier
-        
+        risk_score: Pre-computed risk score
+        predictor: Optional MLPredictor instance
+        top_n: Number of top features to return
+
     Returns:
-        Explanation object with SHAP values and human-readable text
+        ExplainabilityResult with ranked feature explanations
     """
-    if not SHAP_AVAILABLE:
-        # Fallback: simple feature importance
-        return _fallback_explanation(features, session_id)
-    
-    try:
-        # Convert features to array
-        feature_vector = np.array([features.get(name, 0.0) for name in feature_names]).reshape(1, -1)
-        
-        # Create SHAP explainer
-        explainer = shap.TreeExplainer(model)
-        
-        # Get SHAP values
-        shap_values = explainer.shap_values(feature_vector)
-        
-        # Handle multi-class output
-        if isinstance(shap_values, list):
-            shap_values = shap_values[1]  # Get values for positive class
-        
-        shap_values = shap_values[0]  # Get first sample
-        base_value = explainer.expected_value
-        
-        if isinstance(base_value, np.ndarray):
-            base_value = base_value[1]
-        
-        # Create feature impact dictionary
-        feature_impacts = {}
-        for name, value in zip(feature_names, shap_values):
-            feature_impacts[name] = float(value)
-        
-        # Sort features by absolute impact
-        sorted_features = sorted(feature_impacts.items(), key=lambda x: abs(x[1]), reverse=True)
-        
-        # Separate positive and negative impacts
-        positive_features = [(name, val) for name, val in sorted_features if val > 0][:5]
-        negative_features = [(name, val) for name, val in sorted_features if val < 0][:5]
-        
-        # Generate explanation text
-        explanation_text = _generate_explanation_text(
-            positive_features,
-            negative_features,
-            base_value,
-            sum(shap_values)
-        )
-        
-        return Explanation(
-            session_id=session_id,
-            prediction=base_value + sum(shap_values),
-            feature_impacts=feature_impacts,
-            top_positive_features=positive_features,
-            top_negative_features=negative_features,
-            base_value=float(base_value),
-            explanation_text=explanation_text
-        )
-    
-    except Exception as e:
-        print(f"SHAP explanation failed: {e}")
-        return _fallback_explanation(features, session_id)
+    if predictor is None:
+        from app.ml.predictor import get_predictor
+        predictor = get_predictor()
 
+    global_importances = get_feature_importance_from_model(predictor)
 
-def _fallback_explanation(features: Dict[str, Any], session_id: str) -> Explanation:
-    """
-    Fallback explanation when SHAP is not available.
-    
-    Uses simple heuristics based on feature values.
-    """
-    # Simple rule-based explanation
-    suspicious_features = []
-    normal_features = []
-    
-    # Check for suspicious patterns
-    if features.get("paste_count", 0) > 0:
-        suspicious_features.append(("paste_count", features["paste_count"]))
-    
-    if features.get("blur_count", 0) > 3:
-        suspicious_features.append(("tab_switching", features["blur_count"]))
-    
-    if features.get("typing_speed_wpm", 0) > 120:
-        suspicious_features.append(("very_fast_typing", features["typing_speed_wpm"]))
-    
-    # Normal patterns
-    if features.get("backspace_ratio", 0) > 0.1:
-        normal_features.append(("natural_editing", features["backspace_ratio"]))
-    
-    explanation_text = "Explanation based on behavioral patterns:\n"
-    
-    if suspicious_features:
-        explanation_text += "\nRisk factors:\n"
-        for feature, value in suspicious_features:
-            explanation_text += f"- {feature}: {value}\n"
-    
-    if normal_features:
-        explanation_text += "\nNormal behaviors:\n"
-        for feature, value in normal_features:
-            explanation_text += f"- {feature}: {value}\n"
-    
-    return Explanation(
-        session_id=session_id,
-        prediction=0.5,
-        feature_impacts={},
-        top_positive_features=suspicious_features,
-        top_negative_features=normal_features,
-        base_value=0.5,
-        explanation_text=explanation_text
+    # Try SHAP first
+    if SHAP_AVAILABLE and predictor.is_trained and predictor.rf_model is not None:
+        try:
+            result = _shap_explanation(
+                predictor, raw_features, global_importances,
+                session_id, risk_score, top_n,
+            )
+            if result is not None:
+                return result
+        except Exception as e:
+            logger.warning(f"SHAP explanation failed, using fallback: {e}")
+
+    # Fallback: model importance × sample value
+    return _fallback_explanation(
+        predictor, raw_features, global_importances,
+        session_id, risk_score, top_n,
     )
 
 
-def _generate_explanation_text(
-    positive_features: List[tuple[str, float]],
-    negative_features: List[tuple[str, float]],
-    base_value: float,
-    total_impact: float
-) -> str:
-    """Generate human-readable explanation text."""
-    
-    explanation = f"Model Explanation:\n\n"
-    explanation += f"Base risk (average student): {base_value:.2%}\n"
-    explanation += f"Predicted risk for this session: {(base_value + total_impact):.2%}\n\n"
-    
-    if positive_features:
-        explanation += "Factors increasing risk:\n"
-        for name, value in positive_features:
-            explanation += f"  • {name}: +{value:.3f} ({_describe_impact(value)})\n"
-    
-    if negative_features:
-        explanation += "\nFactors decreasing risk:\n"
-        for name, value in negative_features:
-            explanation += f"  • {name}: {value:.3f} ({_describe_impact(value)})\n"
-    
-    return explanation
+def _shap_explanation(
+    predictor,
+    raw_features: Dict[str, Any],
+    global_importances: Dict[str, float],
+    session_id: str,
+    risk_score: float,
+    top_n: int,
+) -> Optional[ExplainabilityResult]:
+    """Generate explanation using SHAP TreeExplainer."""
+    from app.ml.derived_features import extract_derived_features
 
+    derived = extract_derived_features(raw_features)
+    vector = predictor.features_to_vector(raw_features, derived)
+    if vector is None:
+        return None
 
-def _describe_impact(value: float) -> str:
-    """Describe the magnitude of a SHAP value impact."""
-    abs_value = abs(value)
-    if abs_value > 0.2:
-        return "strong impact"
-    elif abs_value > 0.1:
-        return "moderate impact"
-    elif abs_value > 0.05:
-        return "small impact"
+    if predictor.imputer:
+        vector = predictor.imputer.transform(vector)
+    if predictor.scaler:
+        vector = predictor.scaler.transform(vector)
+
+    explainer = shap.TreeExplainer(predictor.rf_model)
+    shap_values = explainer.shap_values(vector)
+
+    # shap_values can be [array_class_0, array_class_1] or single array
+    if isinstance(shap_values, list):
+        # Use class-1 (cheating) SHAP values
+        sv = shap_values[1][0]
     else:
-        return "minimal impact"
+        sv = shap_values[0]
 
+    # Get feature names
+    if predictor.vectorizer and hasattr(predictor.vectorizer, "get_feature_names_out"):
+        names = list(predictor.vectorizer.get_feature_names_out())
+    elif predictor.vectorizer and hasattr(predictor.vectorizer, "feature_names_"):
+        names = list(predictor.vectorizer.feature_names_)
+    else:
+        names = [f"feature_{i}" for i in range(len(sv))]
 
-def batch_explain(
-    model,
-    features_list: List[Dict[str, Any]],
-    feature_names: List[str]
-) -> List[Explanation]:
-    """
-    Generate explanations for multiple predictions.
-    
-    Args:
-        model: Trained ML model
-        features_list: List of feature dictionaries
-        feature_names: List of feature names
-        
-    Returns:
-        List of explanations
-    """
+    # Build explanations sorted by |SHAP value|
+    indices = np.argsort(np.abs(sv))[::-1][:top_n]
     explanations = []
-    
-    for i, features in enumerate(features_list):
-        session_id = features.get("session_id", f"session_{i}")
-        explanation = explain_prediction(model, features, feature_names, session_id)
-        explanations.append(explanation)
-    
-    return explanations
+
+    # Get actual feature values as a dense array
+    v_dense = vector.toarray().flatten() if hasattr(vector, "toarray") else np.asarray(vector).flatten()
+
+    for idx in indices:
+        name = names[idx] if idx < len(names) else f"feature_{idx}"
+        explanations.append(FeatureExplanation(
+            feature_name=name,
+            importance=global_importances.get(name, 0.0),
+            contribution=float(sv[idx]),
+            value=float(v_dense[idx]) if idx < len(v_dense) else 0.0,
+            direction="risk" if sv[idx] > 0 else "safe",
+        ))
+
+    return ExplainabilityResult(
+        session_id=session_id,
+        risk_score=risk_score,
+        method="shap",
+        top_features=explanations,
+        global_importances=global_importances,
+    )
 
 
-def get_global_feature_importance(
-    model,
-    feature_names: List[str],
-    background_data: np.ndarray = None
-) -> Dict[str, float]:
+def _fallback_explanation(
+    predictor,
+    raw_features: Dict[str, Any],
+    global_importances: Dict[str, float],
+    session_id: str,
+    risk_score: float,
+    top_n: int,
+) -> ExplainabilityResult:
     """
-    Get global feature importance across all predictions.
-    
-    Args:
-        model: Trained ML model
-        feature_names: List of feature names
-        background_data: Background dataset for SHAP
-        
-    Returns:
-        Dictionary of feature importances
+    Fallback explanation using model importances weighted by feature values.
+
+    For each feature: contribution ≈ importance × value
+    This is a reasonable approximation when SHAP is not available.
     """
-    if not SHAP_AVAILABLE:
-        # Fallback: use model's feature_importances_ if available
-        if hasattr(model, 'feature_importances_'):
-            importances = model.feature_importances_
-            return dict(zip(feature_names, importances))
-        return {}
-    
-    try:
-        explainer = shap.TreeExplainer(model)
-        
-        if background_data is None:
-            # Use a small synthetic background
-            background_data = np.zeros((10, len(feature_names)))
-        
-        shap_values = explainer.shap_values(background_data)
-        
-        # Handle multi-class
-        if isinstance(shap_values, list):
-            shap_values = shap_values[1]
-        
-        # Calculate mean absolute SHAP value for each feature
-        mean_abs_shap = np.mean(np.abs(shap_values), axis=0)
-        
-        return dict(zip(feature_names, mean_abs_shap))
-    
-    except Exception as e:
-        print(f"Global importance calculation failed: {e}")
-        return {}
+    from app.ml.derived_features import extract_derived_features
+
+    # Gather feature values from raw_features (use same keys as model)
+    derived = extract_derived_features(raw_features)
+
+    # Build a mapping of interpretable feature names → values
+    feature_values: Dict[str, float] = {
+        "paste_score": float(raw_features.get("paste_score", 0)),
+        "focus_score": float(raw_features.get("focus_score", 0)),
+        "hesitation_score": float(raw_features.get("hesitation_score", 0)),
+        "typing_score": float(raw_features.get("typing_score", 0)),
+        "text_score": float(raw_features.get("text_score", 0)),
+        "overall_score": float(raw_features.get("overall_score", 0)),
+        "paste_after_blur_ratio": derived.paste_after_blur_ratio,
+        "burst_density": derived.burst_density,
+        "paste_to_typing_ratio": derived.paste_to_typing_ratio,
+        "paste_score_amplified": derived.paste_score_amplified,
+        "focus_score_amplified": derived.focus_score_amplified,
+        "hesitation_score_amplified": derived.hesitation_score_amplified,
+    }
+
+    # Also pull nested paste/focus sub-features
+    paste = raw_features.get("paste", {})
+    if isinstance(paste, dict):
+        for k, v in paste.items():
+            if isinstance(v, (int, float)):
+                feature_values[f"paste_{k}"] = float(v)
+
+    focus = raw_features.get("focus", {})
+    if isinstance(focus, dict):
+        for k, v in focus.items():
+            if isinstance(v, (int, float)):
+                feature_values[f"focus_{k}"] = float(v)
+
+    # Compute approximate contributions
+    scored: List[Tuple[str, float, float, float]] = []  # (name, importance, contribution, value)
+
+    for name, value in feature_values.items():
+        imp = global_importances.get(name, 0.0)
+        if imp == 0.0 and global_importances:
+            # Try partial match (vectorizer may prefix)
+            for gn, gi in global_importances.items():
+                if name in gn or gn in name:
+                    imp = gi
+                    break
+        # Fallback: uniform importance
+        if imp == 0.0 and not global_importances:
+            imp = 1.0 / max(len(feature_values), 1)
+
+        contribution = imp * abs(value)
+        scored.append((name, imp, contribution, value))
+
+    # Sort by contribution desc
+    scored.sort(key=lambda x: x[2], reverse=True)
+
+    explanations = []
+    for name, imp, contrib, value in scored[:top_n]:
+        explanations.append(FeatureExplanation(
+            feature_name=name,
+            importance=imp,
+            contribution=contrib,
+            value=value,
+            direction="risk" if value > 0.3 else "safe",
+        ))
+
+    return ExplainabilityResult(
+        session_id=session_id,
+        risk_score=risk_score,
+        method="model_importance",
+        top_features=explanations,
+        global_importances=global_importances,
+    )

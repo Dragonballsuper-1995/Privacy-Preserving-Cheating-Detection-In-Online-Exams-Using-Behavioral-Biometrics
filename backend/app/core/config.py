@@ -25,7 +25,6 @@ class Settings(BaseSettings):
     
     # CORS
     cors_origins: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
-    allowed_origins: str = "http://localhost:3000"  # For compatibility
     
     @field_validator('cors_origins', mode='before')
     @classmethod
@@ -47,6 +46,19 @@ class Settings(BaseSettings):
     event_logs_dir: str = "data/event_logs"
     models_dir: str = "models"
     data_dir: str = "data"
+
+    # Rate Limiting
+    rate_limit_events: str = "400/minute"
+    max_batch_size: int = 200
+
+    # Google Custom Search API (for web source checking)
+    google_api_key: str = ""
+    google_search_cx: str = ""
+    enable_web_search: bool = False
+
+    # AI Detection
+    ai_detection_model: str = "all-MiniLM-L6-v2"
+    hf_token: Union[str, None] = None
     
     class Config:
         env_file = ".env"

@@ -180,7 +180,9 @@ def generate_training_data(
 def train_ml_models(
     n_samples: int = 1000,
     save_data: bool = True,
-    use_real_data: bool = True
+    use_real_data: bool = True,
+    data_source: str = "both",
+    k_folds: int = 0,
 ) -> Dict[str, float]:
     """
     Generate training data and train ML models.
@@ -189,6 +191,8 @@ def train_ml_models(
         n_samples: Total number of samples (split 50/50) for synthetic only
         save_data: Whether to save training data
         use_real_data: Whether to use real datasets (BB-MAS, etc.)
+        data_source: "real", "synthetic", or "both" (default)
+        k_folds: If > 1, run k-fold cross-validation before final train
         
     Returns:
         Training metrics
@@ -198,6 +202,13 @@ def train_ml_models(
     print("=" * 50)
     print("ML MODEL TRAINING")
     print("=" * 50)
+    
+    # Resolve data_source vs legacy use_real_data
+    if data_source == "synthetic":
+        use_real_data = False
+    elif data_source == "real":
+        use_real_data = True
+    # "both" keeps use_real_data as-is (default True)
     
     if use_real_data:
         # Use real data loader
@@ -225,7 +236,16 @@ def train_ml_models(
     print(f"  Clean: {n_clean}")
     print(f"  Cheating: {n_cheat}")
     
-    # Train models
+    # ── K-Fold Cross-Validation ──
+    if k_folds > 1 and len(training_data) >= k_folds * 2:
+        print(f"\nRunning {k_folds}-fold cross-validation...")
+        cv_metrics = _run_cross_validation(training_data, k_folds)
+        print(f"\n  CV Accuracy:  {cv_metrics['cv_accuracy_mean']:.1%} ± {cv_metrics['cv_accuracy_std']:.1%}")
+        print(f"  CV F1 Score:  {cv_metrics['cv_f1_mean']:.1%} ± {cv_metrics['cv_f1_std']:.1%}")
+        print(f"  CV Precision: {cv_metrics['cv_precision_mean']:.1%} ± {cv_metrics['cv_precision_std']:.1%}")
+        print(f"  CV Recall:    {cv_metrics['cv_recall_mean']:.1%} ± {cv_metrics['cv_recall_std']:.1%}")
+    
+    # Train final model on full data
     print("\nTraining Random Forest + Isolation Forest...")
     predictor = MLPredictor()
     metrics = predictor.train(training_data, save_after=True)
@@ -241,6 +261,119 @@ def train_ml_models(
     return metrics
 
 
+def _run_cross_validation(
+    training_data: List[Tuple[Dict[str, Any], int]],
+    k: int = 5,
+) -> Dict[str, float]:
+    """
+    Run stratified k-fold cross-validation.
+
+    Returns dict with cv_accuracy_mean, cv_accuracy_std, etc.
+    """
+    from sklearn.model_selection import StratifiedKFold
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.feature_extraction import DictVectorizer
+    from sklearn.impute import SimpleImputer
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+
+    # Flatten features
+    flat_data = []
+    labels = []
+    for feat_dict, label in training_data:
+        flat = {}
+        for key, value in feat_dict.items():
+            if isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, (int, float, bool)):
+                        flat[f"{key}_{sub_key}"] = float(sub_value)
+            elif isinstance(value, (int, float, bool)):
+                flat[key] = float(value)
+        flat_data.append(flat)
+        labels.append(label)
+
+    import numpy as np
+    y = np.array(labels)
+
+    # Vectorize
+    vec = DictVectorizer(sparse=False)
+    X_raw = vec.fit_transform(flat_data)
+
+    skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
+    acc_scores, f1_scores, prec_scores, rec_scores = [], [], [], []
+
+    for train_idx, val_idx in skf.split(X_raw, y):
+        X_train, X_val = X_raw[train_idx], X_raw[val_idx]
+        y_train, y_val = y[train_idx], y[val_idx]
+
+        imp = SimpleImputer(strategy="median")
+        X_train = imp.fit_transform(X_train)
+        X_val = imp.transform(X_val)
+
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_val = scaler.transform(X_val)
+
+        rf = RandomForestClassifier(
+            n_estimators=100, max_depth=12,
+            class_weight="balanced", random_state=42, n_jobs=-1,
+        )
+        rf.fit(X_train, y_train)
+        y_pred = rf.predict(X_val)
+
+        acc_scores.append(accuracy_score(y_val, y_pred))
+        f1_scores.append(f1_score(y_val, y_pred, zero_division=0))
+        prec_scores.append(precision_score(y_val, y_pred, zero_division=0))
+        rec_scores.append(recall_score(y_val, y_pred, zero_division=0))
+
+    return {
+        "cv_accuracy_mean": float(np.mean(acc_scores)),
+        "cv_accuracy_std": float(np.std(acc_scores)),
+        "cv_f1_mean": float(np.mean(f1_scores)),
+        "cv_f1_std": float(np.std(f1_scores)),
+        "cv_precision_mean": float(np.mean(prec_scores)),
+        "cv_precision_std": float(np.std(prec_scores)),
+        "cv_recall_mean": float(np.mean(rec_scores)),
+        "cv_recall_std": float(np.std(rec_scores)),
+    }
+
+
 if __name__ == "__main__":
-    # Run training with real data when executed directly
-    train_ml_models(use_real_data=True, save_data=True)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Train cheating detection ML models")
+    parser.add_argument(
+        "--data-source",
+        choices=["real", "synthetic", "both"],
+        default="both",
+        help="Which data to train on (default: both)",
+    )
+    parser.add_argument(
+        "--folds",
+        type=int,
+        default=0,
+        help="K-fold cross-validation folds (0 = skip CV, default: 0)",
+    )
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=1000,
+        help="Number of synthetic samples when using synthetic data (default: 1000)",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging",
+    )
+    args = parser.parse_args()
+
+    import logging
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+
+    train_ml_models(
+        n_samples=args.samples,
+        save_data=True,
+        data_source=args.data_source,
+        k_folds=args.folds,
+    )
+

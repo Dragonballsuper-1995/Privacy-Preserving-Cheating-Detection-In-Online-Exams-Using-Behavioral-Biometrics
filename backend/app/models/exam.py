@@ -2,7 +2,7 @@
 Exam and Question models
 """
 
-from sqlalchemy import Column, String, Integer, Text, ForeignKey, JSON, DateTime, Enum
+from sqlalchemy import Column, String, Integer, Text, ForeignKey, JSON, DateTime, Enum, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -36,6 +36,11 @@ class Exam(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Scheduling & publishing
+    scheduled_start = Column(DateTime, nullable=True)
+    scheduled_end = Column(DateTime, nullable=True)
+    is_published = Column(Boolean, default=False)
+
     # Relationships
     questions = relationship("Question", back_populates="exam", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="exam")
@@ -48,6 +53,9 @@ class Exam(Base):
             "duration_minutes": self.duration_minutes,
             "question_count": len(self.questions) if self.questions else 0,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "scheduled_start": self.scheduled_start.isoformat() if self.scheduled_start else None,
+            "scheduled_end": self.scheduled_end.isoformat() if self.scheduled_end else None,
+            "is_published": self.is_published,
         }
 
 

@@ -38,11 +38,30 @@ def get_db():
 
 
 def init_db():
-    """Initialize database tables."""
+    """
+    Initialize database tables.
+
+    For development convenience, this still calls create_all() on the first
+    run and stamps the Alembic version table so that subsequent schema
+    changes are tracked through proper migrations.
+
+    Production deployments should use:
+        alembic upgrade head
+    """
     # Import models to register them with Base
     from app.models.exam import Exam, Question  # noqa: F401
     from app.models.session import Session, Answer  # noqa: F401
     from app.models.event import BehaviorEvent, FeatureVector, RiskScore  # noqa: F401
-    
-    # Create all tables
+    from app.models.user import User  # noqa: F401
+
+    # Create tables (idempotent — only creates missing tables)
     Base.metadata.create_all(bind=engine)
+
+    # Stamp Alembic version so migrations know the current state
+    try:
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), '..', '..', 'alembic.ini'))
+        command.stamp(alembic_cfg, "head")
+    except Exception:
+        pass  # Alembic not configured yet — that's OK during early development

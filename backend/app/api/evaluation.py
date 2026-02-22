@@ -2,7 +2,8 @@
 API endpoint for evaluation and reporting.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from app.core.auth import require_instructor, UserResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -24,7 +25,7 @@ class EvaluationRequest(BaseModel):
 
 
 @router.post("/evaluate")
-async def run_evaluation(request: EvaluationRequest):
+async def run_evaluation(request: EvaluationRequest, user: UserResponse = Depends(require_instructor)):
     """
     Evaluate the model on the training dataset.
     
@@ -38,7 +39,7 @@ async def run_evaluation(request: EvaluationRequest):
 
 
 @router.get("/optimal-threshold")
-async def get_optimal_threshold():
+async def get_optimal_threshold(user: UserResponse = Depends(require_instructor)):
     """
     Find the optimal classification threshold.
     
@@ -56,7 +57,7 @@ async def get_optimal_threshold():
 
 
 @router.get("/report")
-async def get_evaluation_report():
+async def get_evaluation_report(user: UserResponse = Depends(require_instructor)):
     """
     Generate a markdown evaluation report.
     """
@@ -65,7 +66,7 @@ async def get_evaluation_report():
 
 
 @router.get("/dataset-info")
-async def get_dataset_info():
+async def get_dataset_info(user: UserResponse = Depends(require_instructor)):
     """
     Get information about the current training dataset.
     """

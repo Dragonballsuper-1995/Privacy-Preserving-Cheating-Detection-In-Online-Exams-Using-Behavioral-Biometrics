@@ -206,6 +206,152 @@ def find_optimal_threshold(
     return best_threshold, best_result
 
 
+def cross_validate_model(
+    k: int = 5,
+    threshold: float = 0.75,
+) -> Dict[str, Any]:
+    """
+    Run k-fold cross-validation on the training data.
+
+    Uses the same feature pipeline as `evaluate_model` but splits the
+    labeled dataset into k folds and evaluates each fold.
+
+    Args:
+        k: Number of folds
+        threshold: Risk score threshold for classification
+
+    Returns:
+        Dict with per-fold and aggregate metrics
+    """
+    dataset = load_labeled_dataset()
+    if len(dataset) < k * 2:
+        raise ValueError(f"Need at least {k * 2} labeled samples for {k}-fold CV")
+
+    # Gather features for all labeled sessions
+    valid_entries: List[Tuple[float, int]] = []   # (risk_score, label)
+    for session_id, label in dataset:
+        log_file = os.path.join(settings.event_logs_dir, f"session_{session_id}.jsonl")
+        if not os.path.exists(log_file):
+            continue
+        events = []
+        with open(log_file, "r") as f:
+            for line in f:
+                try:
+                    events.append(json.loads(line))
+                except Exception:
+                    continue
+        if not events:
+            continue
+        features = extract_all_features(events, session_id)
+        valid_entries.append((features.overall_score, label))
+
+    if len(valid_entries) < k * 2:
+        raise ValueError("Not enough valid samples after feature extraction")
+
+    from sklearn.model_selection import StratifiedKFold
+
+    scores = np.array([s for s, _ in valid_entries])
+    labels = np.array([l for _, l in valid_entries])
+
+    skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
+    fold_results = []
+
+    for fold_i, (train_idx, val_idx) in enumerate(skf.split(scores, labels)):
+        y_true = labels[val_idx]
+        y_scores = scores[val_idx]
+        y_pred = (y_scores >= threshold).astype(int)
+
+        fold_results.append({
+            "fold": fold_i + 1,
+            "accuracy": float(accuracy_score(y_true, y_pred)),
+            "precision": float(precision_score(y_true, y_pred, zero_division=0)),
+            "recall": float(recall_score(y_true, y_pred, zero_division=0)),
+            "f1": float(f1_score(y_true, y_pred, zero_division=0)),
+            "samples": len(val_idx),
+        })
+
+    agg = {
+        "accuracy": float(np.mean([f["accuracy"] for f in fold_results])),
+        "precision": float(np.mean([f["precision"] for f in fold_results])),
+        "recall": float(np.mean([f["recall"] for f in fold_results])),
+        "f1": float(np.mean([f["f1"] for f in fold_results])),
+    }
+
+    return {
+        "k": k,
+        "threshold": threshold,
+        "folds": fold_results,
+        "aggregate": agg,
+        "total_samples": len(valid_entries),
+    }
+
+
+def temporal_split_evaluate(
+    train_ratio: float = 0.7,
+    threshold: float = 0.75,
+) -> Dict[str, Any]:
+    """
+    Evaluate using a temporal (chronological) train/test split.
+
+    The first ``train_ratio`` fraction of labeled sessions are treated as
+    the training set and the remainder as the test set.  This simulates
+    how the model would perform on *future* data.
+
+    Args:
+        train_ratio: Fraction of data used for training calibration
+        threshold: Risk score threshold
+
+    Returns:
+        Dict with train and test metrics
+    """
+    dataset = load_labeled_dataset()
+    if len(dataset) < 4:
+        raise ValueError("Need at least 4 labeled samples for temporal split")
+
+    # Keep dataset order (chronological)
+    valid_entries: List[Tuple[float, int]] = []
+    for session_id, label in dataset:
+        log_file = os.path.join(settings.event_logs_dir, f"session_{session_id}.jsonl")
+        if not os.path.exists(log_file):
+            continue
+        events = []
+        with open(log_file, "r") as f:
+            for line in f:
+                try:
+                    events.append(json.loads(line))
+                except Exception:
+                    continue
+        if not events:
+            continue
+        features = extract_all_features(events, session_id)
+        valid_entries.append((features.overall_score, label))
+
+    split_idx = int(len(valid_entries) * train_ratio)
+    if split_idx < 1 or split_idx >= len(valid_entries):
+        raise ValueError("Split results in empty train or test set")
+
+    test_entries = valid_entries[split_idx:]
+    y_true = np.array([l for _, l in test_entries])
+    y_scores = np.array([s for s, _ in test_entries])
+    y_pred = (y_scores >= threshold).astype(int)
+
+    try:
+        auc = float(roc_auc_score(y_true, y_scores))
+    except ValueError:
+        auc = 0.5
+
+    return {
+        "train_size": split_idx,
+        "test_size": len(test_entries),
+        "threshold": threshold,
+        "accuracy": float(accuracy_score(y_true, y_pred)),
+        "precision": float(precision_score(y_true, y_pred, zero_division=0)),
+        "recall": float(recall_score(y_true, y_pred, zero_division=0)),
+        "f1": float(f1_score(y_true, y_pred, zero_division=0)),
+        "auc_roc": auc,
+    }
+
+
 def generate_evaluation_report(output_path: str = None) -> str:
     """
     Generate a comprehensive evaluation report.

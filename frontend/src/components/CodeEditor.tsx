@@ -15,7 +15,6 @@ interface CodeEditorProps {
     language?: string;
     height?: string;
     readOnly?: boolean;
-    onKeyEvent?: (event: KeyboardEvent) => void;
 }
 
 export function CodeEditor({
@@ -29,23 +28,7 @@ export function CodeEditor({
 
     const handleEditorMount: OnMount = useCallback((editor) => {
         editorRef.current = editor;
-
-        // Focus the editor
         editor.focus();
-
-        // Configure editor options
-        editor.updateOptions({
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            fontSize: 14,
-            lineNumbers: 'on',
-            automaticLayout: true,
-            tabSize: 4,
-            insertSpaces: true,
-            wordWrap: 'on',
-            folding: true,
-            bracketPairColorization: { enabled: true },
-        });
     }, []);
 
     const handleChange: OnChange = useCallback((newValue) => {
@@ -68,7 +51,7 @@ export function CodeEditor({
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500">
-                        Press Ctrl+S to save
+                        Changes saved automatically
                     </span>
                 </div>
             </div>
@@ -105,24 +88,3 @@ export function CodeEditor({
     );
 }
 
-// Language map for common file extensions
-export const languageMap: Record<string, string> = {
-    py: 'python',
-    python: 'python',
-    js: 'javascript',
-    javascript: 'javascript',
-    ts: 'typescript',
-    typescript: 'typescript',
-    java: 'java',
-    cpp: 'cpp',
-    c: 'c',
-    go: 'go',
-    rust: 'rust',
-    rb: 'ruby',
-    ruby: 'ruby',
-};
-
-export function getLanguage(lang?: string): string {
-    if (!lang) return 'python';
-    return languageMap[lang.toLowerCase()] || lang.toLowerCase();
-}

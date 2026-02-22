@@ -5,12 +5,10 @@ Implements rate limiting, CORS, and security headers.
 """
 
 from fastapi import Request, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from starlette.middleware.sessions import SessionMiddleware
 import time
 from collections import defaultdict
 from typing import Dict, Tuple
@@ -87,7 +85,7 @@ async def rate_limit_middleware(request: Request, call_next):
         max_requests, window = 1000, 60
         key = f"events_{client_ip}"
     elif "/api/analysis" in path:
-        max_requests, window = 10, 60
+        max_requests, window = 400, 60
         key = f"analysis_{client_ip}"
     else:
         max_requests, window = 60, 60
@@ -97,9 +95,9 @@ async def rate_limit_middleware(request: Request, call_next):
     is_limited, retry_after = rate_limiter.is_rate_limited(key, max_requests, window)
     
     if is_limited:
-        return HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Rate limit exceeded. Retry after {retry_after} seconds",
+            content={"detail": f"Rate limit exceeded. Retry after {retry_after} seconds"},
             headers={"Retry-After": str(retry_after)}
         )
     
@@ -129,42 +127,6 @@ async def security_headers_middleware(request: Request, call_next):
     return response
 
 
-# CORS configuration
-def configure_cors(app):
-    """Configure CORS middleware."""
-    origins = settings.allowed_origins.split(",") if settings.allowed_origins else ["*"]
-    
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-        allow_headers=["*"],
-        expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
-    )
-
-
-# Trusted host configuration
-def configure_trusted_hosts(app):
-    """Configure trusted host middleware."""
-    if settings.environment == "production":
-        app.add_middleware(
-            TrustedHostMiddleware,
-            allowed_hosts=settings.allowed_origins.split(",")
-        )
-
-
-# Session configuration (for CSRF protection)  
-def configure_sessions(app):
-    """Configure session middleware."""
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.secret_key,
-        session_cookie="session",
-        max_age=3600,  # 1 hour
-        same_site="lax",
-        https_only=settings.environment == "production"
-    )
 
 
 # Request validation

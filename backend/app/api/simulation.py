@@ -2,7 +2,8 @@
 Simulation API - Generate test data and train models
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from app.core.auth import require_admin, UserResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import os
@@ -35,7 +36,7 @@ class TrainingRequest(BaseModel):
 
 
 @router.post("/simulate")
-async def generate_simulated_sessions(request: SimulateRequest):
+async def generate_simulated_sessions(request: SimulateRequest, user: UserResponse = Depends(require_admin)):
     """
     Generate simulated exam sessions for testing.
     
@@ -69,7 +70,7 @@ async def generate_simulated_sessions(request: SimulateRequest):
 
 
 @router.post("/generate-training-data")
-async def generate_training_data(request: TrainingRequest):
+async def generate_training_data(request: TrainingRequest, user: UserResponse = Depends(require_admin)):
     """
     Generate a labeled training dataset.
     
@@ -94,7 +95,7 @@ async def generate_training_data(request: TrainingRequest):
 
 
 @router.post("/train-models")
-async def train_models():
+async def train_models(user: UserResponse = Depends(require_admin)):
     """
     Train ML models on the generated training data.
     
@@ -186,7 +187,7 @@ async def train_models():
 
 
 @router.get("/status")
-async def get_simulation_status():
+async def get_simulation_status(user: UserResponse = Depends(require_admin)):
     """Get the current status of simulation and models."""
     # Check for training data
     manifest_path = os.path.join(settings.data_dir, "training_manifest.json")

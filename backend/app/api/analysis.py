@@ -3,14 +3,17 @@ Analysis API - Feature extraction and risk scoring.
 Uses the new modular feature extraction pipeline.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import datetime
 import json
 import os
-
 from app.core.config import settings
+from app.core.auth import require_instructor, UserResponse
+from app.core.database import get_db
+from app.models.session import Session as DbSession
+from sqlalchemy.orm import Session as SQLAlchemySession
 from app.features.pipeline import (
     FeatureExtractor, 
     extract_all_features,
@@ -51,8 +54,9 @@ class RiskScoreResponse(BaseModel):
     overall_score: float
     typing_score: float
     hesitation_score: float
-    paste_score: float  # Renamed from similarity to paste
-    focus_score: float  # Renamed from editing to focus
+    paste_score: float
+    focus_score: float
+    similarity_score: float = 0.0  # AI detection + web source check
     
     is_flagged: bool
     flag_reasons: List[str]
@@ -77,6 +81,7 @@ def session_features_to_response(features: SessionFeatures, include_details: boo
         hesitation_score=features.hesitation_score,
         paste_score=features.paste_score,
         focus_score=features.focus_score,
+        similarity_score=features.similarity_score,
         is_flagged=features.is_flagged,
         flag_reasons=features.flag_reasons,
     )
@@ -87,6 +92,7 @@ def session_features_to_response(features: SessionFeatures, include_details: boo
             "hesitation": features.hesitation.to_dict(),
             "paste": features.paste.to_dict(),
             "focus": features.focus.to_dict(),
+            "similarity": features.similarity.to_dict(),
         }
     
     return response
@@ -111,7 +117,7 @@ def load_session_events(session_id: str) -> List[Dict]:
 
 
 @router.post("/analyze", response_model=RiskScoreResponse)
-async def analyze_session(request: AnalysisRequest):
+async def analyze_session(request: AnalysisRequest, user: UserResponse = Depends(require_instructor)):
     """
     Analyze a session and compute risk score.
     
@@ -135,7 +141,7 @@ async def analyze_session(request: AnalysisRequest):
 
 
 @router.post("/analyze/questions")
-async def analyze_by_question(request: AnalysisRequest):
+async def analyze_by_question(request: AnalysisRequest, user: UserResponse = Depends(require_instructor)):
     """
     Analyze a session with per-question breakdown.
     
@@ -163,7 +169,7 @@ async def analyze_by_question(request: AnalysisRequest):
 
 
 @router.get("/session/{session_id}/features")
-async def get_session_features(session_id: str):
+async def get_session_features(session_id: str, user: UserResponse = Depends(require_instructor)):
     """Get detailed extracted features for a session."""
     events = load_session_events(session_id)
     
@@ -176,7 +182,7 @@ async def get_session_features(session_id: str):
 
 
 @router.get("/session/{session_id}/timeline")
-async def get_session_timeline(session_id: str, limit: int = 100):
+async def get_session_timeline(session_id: str, limit: int = 100, user: UserResponse = Depends(require_instructor)):
     """
     Get a timeline of events for visualization.
     
@@ -220,7 +226,10 @@ async def get_session_timeline(session_id: str, limit: int = 100):
 
 
 @router.get("/dashboard/summary")
-async def get_dashboard_summary():
+async def get_dashboard_summary(
+    user: UserResponse = Depends(require_instructor),
+    db: SQLAlchemySession = Depends(get_db)
+):
     """
     Get summary statistics for all analyzed sessions.
     Returns aggregated data and list of all sessions with risk scores.
@@ -246,16 +255,47 @@ async def get_dashboard_summary():
         risk_threshold=settings.risk_threshold
     )
     
+    # Pre-fetch all session database records to avoid N+1 queries for review status
+    db_sessions = db.query(DbSession.id, DbSession.review_status).all()
+    review_status_map = {row.id: row.review_status.value if row.review_status else "pending" for row in db_sessions}
+    
     for filename in os.listdir(log_dir):
         if filename.startswith("session_") and filename.endswith(".jsonl"):
             session_id = filename.replace("session_", "").replace(".jsonl", "")
             filepath = os.path.join(log_dir, filename)
+            # Check for cached result
+            result_file = os.path.join(log_dir, f"session_{session_id}.result.json")
+            cached_data = None
+            
+            try:
+                log_mtime = os.path.getmtime(filepath)
+                if os.path.exists(result_file):
+                    result_mtime = os.path.getmtime(result_file)
+                    if result_mtime >= log_mtime:
+                        with open(result_file, 'r') as f:
+                            cached_data = json.load(f)
+            except Exception as e:
+                # Ignore cache errors and re-process
+                pass
+            
+            if cached_data:
+                # Invalidate cache if it doesn't have similarity_score (old format)
+                if "scores" in cached_data and "similarity" not in cached_data["scores"]:
+                    cached_data = None  # Force re-analysis
+                else:
+                    if cached_data.get("is_flagged"):
+                        flagged_count += 1
+                    # Override review_status with real DB state, as cache can't track instructor DB action
+                    cached_data["review_status"] = review_status_map.get(session_id, "pending")
+                    sessions.append(cached_data)
+                    continue
+            
+            # Cache miss - Process from scratch
             metadata_file = os.path.join(log_dir, f"session_{session_id}.meta.json")
             
             # Get file modification time as created_at
             try:
-                file_mtime = os.path.getmtime(filepath)
-                created_at = datetime.fromtimestamp(file_mtime).isoformat()
+                created_at = datetime.fromtimestamp(log_mtime).isoformat()
             except:
                 created_at = None
             
@@ -285,7 +325,7 @@ async def get_dashboard_summary():
                 if features.is_flagged:
                     flagged_count += 1
                 
-                sessions.append({
+                session_data = {
                     "session_id": session_id,
                     "risk_score": features.overall_score,
                     "is_flagged": features.is_flagged,
@@ -293,13 +333,24 @@ async def get_dashboard_summary():
                     "flag_reasons": features.flag_reasons[:3],  # Top 3 reasons
                     "created_at": created_at,  # Added timestamp
                     "is_simulated": is_simulated,  # Use the value determined from metadata
+                    "review_status": review_status_map.get(session_id, "pending"),
                     "scores": {
                         "typing": features.typing_score,
                         "hesitation": features.hesitation_score,
                         "paste": features.paste_score,
                         "focus": features.focus_score,
+                        "similarity": features.similarity_score,
                     }
-                })
+                }
+                
+                # Save to cache
+                try:
+                    with open(result_file, 'w') as f:
+                        json.dump(session_data, f)
+                except:
+                    pass
+                
+                sessions.append(session_data)
     
     # Sort by created_at (most recent first), then by risk score
     sessions.sort(key=lambda x: (
@@ -312,3 +363,109 @@ async def get_dashboard_summary():
         "flagged_sessions": flagged_count,
         "sessions": sessions
     }
+
+
+@router.get("/export/csv")
+async def export_sessions_csv(user: UserResponse = Depends(require_instructor)):
+    """
+    Export all session analysis data as a CSV file.
+
+    Streams a CSV with columns:
+    session_id, risk_score, is_flagged, event_count, typing, hesitation,
+    paste, focus, flag_reasons, created_at, is_simulated
+    """
+    import csv
+    from io import StringIO
+    from fastapi.responses import StreamingResponse
+
+    log_dir = settings.event_logs_dir
+    rows: list[dict] = []
+
+    if os.path.exists(log_dir):
+        extractor = FeatureExtractor(
+            pause_threshold_ms=settings.min_pause_duration,
+            risk_threshold=settings.risk_threshold,
+        )
+
+        for filename in os.listdir(log_dir):
+            if not (filename.startswith("session_") and filename.endswith(".jsonl")):
+                continue
+
+            session_id = filename.replace("session_", "").replace(".jsonl", "")
+            filepath = os.path.join(log_dir, filename)
+
+            # Try cache first
+            result_file = os.path.join(log_dir, f"session_{session_id}.result.json")
+            cached = None
+            try:
+                log_mtime = os.path.getmtime(filepath)
+                if os.path.exists(result_file):
+                    if os.path.getmtime(result_file) >= log_mtime:
+                        with open(result_file, "r") as f:
+                            cached = json.load(f)
+            except Exception:
+                pass
+
+            if cached:
+                rows.append(cached)
+                continue
+
+            # Compute from scratch
+            events = load_session_events(session_id)
+            if events:
+                features = extractor.extract_features(events, session_id)
+                try:
+                    created_at = datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
+                except Exception:
+                    created_at = None
+
+                rows.append({
+                    "session_id": session_id,
+                    "risk_score": features.overall_score,
+                    "is_flagged": features.is_flagged,
+                    "event_count": len(events),
+                    "flag_reasons": features.flag_reasons[:3],
+                    "created_at": created_at,
+                    "is_simulated": session_id.startswith("sim-") or session_id.startswith("test-"),
+                    "scores": {
+                        "typing": features.typing_score,
+                        "hesitation": features.hesitation_score,
+                        "paste": features.paste_score,
+                        "focus": features.focus_score,
+                        "similarity": features.similarity_score,
+                    },
+                })
+
+    # Build CSV
+    buf = StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "session_id", "risk_score", "is_flagged", "event_count",
+        "typing_score", "hesitation_score", "paste_score", "focus_score",
+        "similarity_score",
+        "flag_reasons", "created_at", "is_simulated",
+    ])
+    for r in rows:
+        scores = r.get("scores", {})
+        writer.writerow([
+            r.get("session_id", ""),
+            round(r.get("risk_score", 0), 4),
+            r.get("is_flagged", False),
+            r.get("event_count", 0),
+            round(scores.get("typing", 0), 4),
+            round(scores.get("hesitation", 0), 4),
+            round(scores.get("paste", 0), 4),
+            round(scores.get("focus", 0), 4),
+            round(scores.get("similarity", 0), 4),
+            "; ".join(r.get("flag_reasons", [])),
+            r.get("created_at", ""),
+            r.get("is_simulated", False),
+        ])
+
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=sessions_export.csv"},
+    )
+

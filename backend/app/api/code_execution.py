@@ -11,7 +11,8 @@ import os
 import sys
 import json
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from app.core.auth import get_current_active_user, UserResponse
 from pydantic import BaseModel
 from typing import Optional, List, Any
 
@@ -388,7 +389,7 @@ print(json.dumps(results))
 
 
 @router.post("/execute", response_model=CodeExecutionResponse)
-async def execute_code(request: CodeExecutionRequest):
+async def execute_code(request: CodeExecutionRequest, user: UserResponse = Depends(get_current_active_user)):
     """
     Execute code and return the output.
     
@@ -422,7 +423,7 @@ async def execute_code(request: CodeExecutionRequest):
 
 
 @router.post("/run-tests", response_model=RunTestsResponse)
-async def run_tests(request: RunTestsRequest):
+async def run_tests(request: RunTestsRequest, user: UserResponse = Depends(get_current_active_user)):
     """
     Run code against test cases.
     

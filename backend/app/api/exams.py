@@ -7,11 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from enum import Enum
 import uuid
-import sys
-from pathlib import Path
 
-# Add app utils to path for question loader
-sys.path.append(str(Path(__file__).parent.parent))
 from app.utils.question_loader import QuestionLoader
 
 router = APIRouter()
@@ -363,7 +359,93 @@ async def add_question(exam_id: str, question: Question):
     return {"message": "Question added", "question_id": question.id}
 
 
-# New endpoints for category support
+class UpdateExamRequest(BaseModel):
+    """Request to update an exam."""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    duration_minutes: Optional[int] = None
+
+
+@router.patch("/{exam_id}")
+async def update_exam(exam_id: str, request: UpdateExamRequest):
+    """Update an existing exam (user-created only)."""
+    if exam_id not in exams_db:
+        raise HTTPException(status_code=404, detail="Exam not found in custom exams")
+
+    exam = exams_db[exam_id]
+    if request.title is not None:
+        exam.title = request.title
+    if request.description is not None:
+        exam.description = request.description
+    if request.duration_minutes is not None:
+        exam.duration_minutes = request.duration_minutes
+
+    return {"message": "Exam updated", "exam_id": exam_id}
+
+
+@router.delete("/{exam_id}")
+async def delete_exam(exam_id: str):
+    """Delete an exam (user-created only, not mock exams)."""
+    if exam_id not in exams_db:
+        raise HTTPException(status_code=404, detail="Exam not found in custom exams")
+
+    del exams_db[exam_id]
+    return {"message": "Exam deleted", "exam_id": exam_id}
+
+
+class ScheduleExamRequest(BaseModel):
+    """Request to schedule an exam."""
+    scheduled_start: Optional[str] = None  # ISO datetime
+    scheduled_end: Optional[str] = None
+
+
+@router.patch("/{exam_id}/publish")
+async def publish_exam(exam_id: str):
+    """Toggle publish state for an exam."""
+    if exam_id not in exams_db:
+        raise HTTPException(status_code=404, detail="Exam not found in custom exams")
+
+    exam = exams_db[exam_id]
+    # Toggle with a simple attribute check
+    current = getattr(exam, '_published', False)
+    exam._published = not current  # type: ignore[attr-defined]
+    return {"message": f"Exam {'published' if exam._published else 'unpublished'}", "is_published": exam._published}
+
+
+@router.patch("/{exam_id}/schedule")
+async def schedule_exam(exam_id: str, request: ScheduleExamRequest):
+    """Set scheduling window for an exam."""
+    from datetime import datetime as dt
+
+    if exam_id not in exams_db:
+        raise HTTPException(status_code=404, detail="Exam not found in custom exams")
+
+    start = None
+    end = None
+    if request.scheduled_start:
+        try:
+            start = dt.fromisoformat(request.scheduled_start)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid scheduled_start format")
+    if request.scheduled_end:
+        try:
+            end = dt.fromisoformat(request.scheduled_end)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid scheduled_end format")
+
+    if start and end and end <= start:
+        raise HTTPException(status_code=422, detail="scheduled_end must be after scheduled_start")
+
+    exam = exams_db[exam_id]
+    exam._scheduled_start = start  # type: ignore[attr-defined]
+    exam._scheduled_end = end  # type: ignore[attr-defined]
+
+    return {
+        "message": "Exam scheduled",
+        "scheduled_start": request.scheduled_start,
+        "scheduled_end": request.scheduled_end,
+    }
+
 
 @router.get("/categories")
 async def get_categories():

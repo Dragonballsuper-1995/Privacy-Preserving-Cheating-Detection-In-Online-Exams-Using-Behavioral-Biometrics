@@ -35,6 +35,11 @@ from app.features.text_analysis import (
     TextFeatures,
     get_text_suspicion_score
 )
+from app.features.similarity import (
+    extract_similarity_features,
+    calculate_similarity_score,
+    SimilarityFeatures
+)
 from app.core.config import settings
 
 
@@ -50,6 +55,7 @@ class SessionFeatures:
     paste: PasteFeatures = field(default_factory=PasteFeatures)
     focus: FocusFeatures = field(default_factory=FocusFeatures)
     text: TextFeatures = field(default_factory=TextFeatures)
+    similarity: SimilarityFeatures = field(default_factory=SimilarityFeatures)
     
     # Individual scores
     typing_score: float = 0.0
@@ -57,6 +63,7 @@ class SessionFeatures:
     paste_score: float = 0.0
     focus_score: float = 0.0
     text_score: float = 0.0
+    similarity_score: float = 0.0
     
     # Combined score
     overall_score: float = 0.0
@@ -72,11 +79,13 @@ class SessionFeatures:
             "paste": self.paste.to_dict(),
             "focus": self.focus.to_dict(),
             "text": self.text.to_dict(),
+            "similarity": self.similarity.to_dict(),
             "typing_score": self.typing_score,
             "hesitation_score": self.hesitation_score,
             "paste_score": self.paste_score,
             "focus_score": self.focus_score,
             "text_score": self.text_score,
+            "similarity_score": self.similarity_score,
             "overall_score": self.overall_score,
             "is_flagged": self.is_flagged,
             "flag_reasons": self.flag_reasons,
@@ -93,11 +102,12 @@ class FeatureExtractor:
     
     # Risk score weights (based on research and tuning)
     WEIGHTS = {
-        "typing": 0.20,
-        "hesitation": 0.20,
-        "paste": 0.25,
-        "focus": 0.15,
-        "text": 0.20,  # Text-based analysis weight
+        "typing": 0.15,
+        "hesitation": 0.15,
+        "paste": 0.20,
+        "focus": 0.10,
+        "text": 0.15,
+        "similarity": 0.25,  # Highest weight — most direct plagiarism indicator
     }
     
     def __init__(
@@ -170,6 +180,30 @@ class FeatureExtractor:
         features.paste_score = calculate_paste_score(features.paste)
         features.focus_score = calculate_focus_score(features.focus)
         
+        # ── Similarity analysis (AI detection + web source check) ──
+        if answers:
+            try:
+                tab_switching = features.focus.blur_count > 0
+                api_key = getattr(settings, 'google_api_key', '')
+                search_cx = getattr(settings, 'google_search_cx', '')
+                enable_web = getattr(settings, 'enable_web_search', False)
+                
+                features.similarity = extract_similarity_features(
+                    answers=answers,
+                    tab_switch_detected=tab_switching,
+                    api_key=api_key if enable_web else '',
+                    search_cx=search_cx if enable_web else '',
+                )
+                features.similarity_score = calculate_similarity_score(
+                    features.similarity.ai_confidence,
+                    features.similarity.web_match_score,
+                    tab_switching,
+                )
+            except Exception as e:
+                import logging
+                logging.warning(f"Similarity analysis failed for session {session_id}: {e}")
+                features.similarity_score = 0.0
+        
         # Use ML-based prediction instead of threshold logic
         try:
             from app.ml.predictor import predict_cheating
@@ -203,7 +237,8 @@ class FeatureExtractor:
                 self.WEIGHTS["hesitation"] * features.hesitation_score +
                 self.WEIGHTS["paste"] * features.paste_score +
                 self.WEIGHTS["focus"] * features.focus_score +
-                self.WEIGHTS["text"] * features.text_score
+                self.WEIGHTS["text"] * features.text_score +
+                self.WEIGHTS["similarity"] * features.similarity_score
             )
             
             # Fallback threshold check
@@ -212,7 +247,8 @@ class FeatureExtractor:
             has_high_individual = (
                 features.paste_score >= individual_threshold or
                 features.focus_score >= individual_threshold or
-                features.hesitation_score >= individual_threshold
+                features.hesitation_score >= individual_threshold or
+                features.similarity_score >= individual_threshold
             )
             features.is_flagged = is_over_threshold or has_high_individual
             features.flag_reasons = self._generate_flag_reasons(features)
@@ -260,6 +296,13 @@ class FeatureExtractor:
                 reasons.extend(features.text.flag_reasons[:2])  # Include up to 2 text-based reasons
             elif features.text.suspicion_score >= 0.5:
                 reasons.append("Suspicious writing patterns detected in answers")
+        
+        # Similarity / AI detection concerns
+        if features.similarity_score >= 0.3:
+            if features.similarity.flag_reasons:
+                reasons.extend(features.similarity.flag_reasons[:2])
+            elif features.similarity.ai_confidence >= 0.5:
+                reasons.append(f"Possible AI-generated content (confidence: {features.similarity.ai_confidence:.0%})")
         
         return reasons
     

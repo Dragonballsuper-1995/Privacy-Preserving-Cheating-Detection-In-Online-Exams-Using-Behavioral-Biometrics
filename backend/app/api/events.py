@@ -6,7 +6,7 @@ Captures keystrokes, paste events, focus/blur, etc.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 
@@ -67,6 +67,13 @@ async def log_events(batch: EventBatch):
     Log a batch of behavioral events from the exam frontend.
     Events are stored in JSONL format for later processing.
     """
+    # Validate batch size
+    if len(batch.events) > settings.max_batch_size:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Batch too large: {len(batch.events)} events (max {settings.max_batch_size})"
+        )
+
     try:
         # Create session log file path
         log_file = os.path.join(
@@ -83,16 +90,29 @@ async def log_events(batch: EventBatch):
                     "event_type": event.event_type,
                     "data": event.data,
                     "timestamp": event.timestamp,
-                    "logged_at": datetime.utcnow().isoformat()
+                    "logged_at": datetime.now(timezone.utc).isoformat()
                 }
                 f.write(json.dumps(event_data) + "\n")
-        
+
+        # Broadcast live update to admin WebSocket clients
+        try:
+            from app.api.websocket import broadcast_session_status
+            await broadcast_session_status(
+                batch.session_id,
+                "events_received",
+                {"event_count": len(batch.events)}
+            )
+        except Exception:
+            pass  # Don't fail the request if WS broadcast fails
+
         return EventLogResponse(
             success=True,
             events_received=len(batch.events),
             session_id=batch.session_id
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

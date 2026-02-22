@@ -19,6 +19,13 @@ class SessionStatus(str, enum.Enum):
     ANALYZED = "analyzed"
 
 
+class ReviewStatus(str, enum.Enum):
+    """Status of instructor review for flagged sessions."""
+    PENDING = "pending"
+    CONFIRMED_CHEATING = "confirmed_cheating"
+    FALSE_POSITIVE = "false_positive"
+
+
 class Session(Base):
     """Session model - represents a student's exam attempt."""
     __tablename__ = "sessions"
@@ -29,6 +36,12 @@ class Session(Base):
     status = Column(Enum(SessionStatus, native_enum=False), default=SessionStatus.NOT_STARTED)
     started_at = Column(DateTime)
     submitted_at = Column(DateTime)
+    # Review Fields
+    review_status = Column(Enum(ReviewStatus, native_enum=False), default=ReviewStatus.PENDING)
+    reviewed_by = Column(String(100), nullable=True) # Instructor ID
+    review_notes = Column(Text, nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -44,6 +57,10 @@ class Session(Base):
             "status": self.status.value if self.status else None,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "submitted_at": self.submitted_at.isoformat() if self.submitted_at else None,
+            "review_status": self.review_status.value if self.review_status else None,
+            "reviewed_by": self.reviewed_by,
+            "review_notes": self.review_notes,
+            "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
