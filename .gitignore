@@ -59,7 +59,7 @@ Thumbs.db
 
 .env.production
 .env.staging
-models/
+/models/
 Admin Creds.md
 
 # Databases
