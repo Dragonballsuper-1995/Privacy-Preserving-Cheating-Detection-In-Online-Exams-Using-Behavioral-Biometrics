@@ -114,7 +114,7 @@ pytest>=7.4.4
 ### 1. Clone & Setup Environment
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Dragonballsuper-1995/Cryptography-Research-Paper.git
 cd Cheating-Detector
 
 # Create environment file
