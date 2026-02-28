@@ -184,15 +184,12 @@ class FeatureExtractor:
         if answers:
             try:
                 tab_switching = features.focus.blur_count > 0
-                api_key = getattr(settings, 'google_api_key', '')
-                search_cx = getattr(settings, 'google_search_cx', '')
-                enable_web = getattr(settings, 'enable_web_search', False)
                 
+                # Web source checking (Google API) is disabled in similarity.py.
+                # Only local AI detection (sentence-transformers) runs.
                 features.similarity = extract_similarity_features(
                     answers=answers,
                     tab_switch_detected=tab_switching,
-                    api_key=api_key if enable_web else '',
-                    search_cx=search_cx if enable_web else '',
                 )
                 features.similarity_score = calculate_similarity_score(
                     features.similarity.ai_confidence,

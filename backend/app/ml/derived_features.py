@@ -160,7 +160,7 @@ def detect_bursts(
         # Pattern 1: Blur -> Paste (copy-paste burst)
         if event_type == "paste":
             # Look back for recent blur
-            for j in range(i - 1, max(0, i - 10), -1):
+            for j in range(i - 1, max(-1, i - 11), -1):
                 prev_event = sorted_events[j]
                 if prev_event.get("type") == "blur":
                     time_diff = event_time - prev_event.get("timestamp", 0)

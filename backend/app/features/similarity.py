@@ -383,8 +383,9 @@ class WebSourceChecker:
     """
     Checks if answer text can be found online using Google Custom Search API.
 
-    Extracts significant sentences from the answer and searches for them.
-    Returns a match score based on how many snippets are found online.
+    NOTE: Google API calls are DISABLED to avoid quota errors.
+    AI detection via local sentence-transformers still works.
+    To re-enable, remove the early return in check().
     """
 
     def __init__(self, api_key: str = "", search_cx: str = ""):
@@ -398,8 +399,9 @@ class WebSourceChecker:
         Returns:
             (web_match_score: float, matched_sources: list[str])
         """
-        if not self.api_key or not self.search_cx:
-            return 0.0, []
+        # Google API calls disabled — skip entirely to avoid quota errors.
+        # AI detection (local model) is unaffected.
+        return 0.0, []
 
         if not text or len(text.strip()) < 30:
             return 0.0, []

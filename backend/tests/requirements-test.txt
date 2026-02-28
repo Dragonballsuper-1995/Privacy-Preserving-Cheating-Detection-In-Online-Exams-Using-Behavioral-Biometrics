@@ -16,3 +16,8 @@ httpx>=0.26.0  # Already in main requirements
 
 # Mocking (if needed)
 pytest-mock>=3.12.0
+
+# Code quality & security (for health report)
+pylint>=3.0.0
+radon>=6.0.0
+pip-audit>=2.7.0

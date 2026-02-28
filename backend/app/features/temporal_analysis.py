@@ -142,151 +142,103 @@ def detect_behavioral_drift(window_features: List[Dict[str, float]], threshold: 
     return shifts
 
 
-def extract_temporal_features(
-    events: List[Dict[str, Any]],
-    window_size_ms: int = 60000
-) -> TemporalFeatures:
-    """
-    Extract temporal consistency features from events.
-    
-    Args:
-        events: List of event dictionaries
-        window_size_ms: Size of time windows in milliseconds
-        
-    Returns:
-        TemporalFeatures dataclass with extracted features
-    """
-    features = TemporalFeatures()
-    
-    if not events:
-        return features
-    
-    # Split into time windows
-    windows = split_into_time_windows(events, window_size_ms)
-    features.total_time_windows = len(windows)
-    
-    if len(windows) < 2:
-        return features
-    
-    # Calculate typing speed for each window
-    typing_speeds = []
-    window_features_list = []
-    
+def _extract_window_metrics(windows: List[List[Dict[str, Any]]]) -> Tuple[List[float], List[Dict[str, float]]]:
+    typing_speeds, window_features_list = [], []
     for window in windows:
-        typing_speed = calculate_window_typing_speed(window)
-        typing_speeds.append(typing_speed)
-        
-        # Extract simple features for each window
-        key_count = len([e for e in window if e.get("event_type") == "key"])
-        paste_count = len([e for e in window if e.get("event_type") == "paste"])
-        blur_count = len([e for e in window if e.get("event_type") == "blur"])
-        
+        speed = calculate_window_typing_speed(window)
+        typing_speeds.append(speed)
         window_features_list.append({
-            "typing_speed": typing_speed,
-            "key_count": key_count,
-            "paste_count": paste_count,
-            "blur_count": blur_count,
+            "typing_speed": speed,
+            "key_count": len([e for e in window if e.get("event_type") == "key"]),
+            "paste_count": len([e for e in window if e.get("event_type") == "paste"]),
+            "blur_count": len([e for e in window if e.get("event_type") == "blur"])
         })
-    
-    # Analyze typing speed variance
+    return typing_speeds, window_features_list
+
+def _analyze_typing_speeds(typing_speeds: List[float], features: TemporalFeatures) -> None:
     valid_speeds = [s for s in typing_speeds if s > 0]
     if len(valid_speeds) > 1:
         features.typing_speed_variance = statistics.variance(valid_speeds)
-        
-        # Calculate drift (difference between first and last windows)
-        if valid_speeds:
-            features.typing_speed_drift = abs(valid_speeds[-1] - valid_speeds[0])
-    
-    # Detect behavioral shifts
-    features.sudden_change_count = detect_behavioral_drift(window_features_list)
-    
-    # Calculate behavior variance score
-    # High variance across windows = inconsistent behavior
+        features.typing_speed_drift = abs(valid_speeds[-1] - valid_speeds[0])
+
+def _analyze_behavior_variance(window_features_list: List[Dict[str, float]], features: TemporalFeatures) -> None:
     if len(window_features_list) > 1:
         variances = []
-        
         for key in ["key_count", "paste_count", "blur_count"]:
             values = [w[key] for w in window_features_list]
-            if len(values) > 1 and any(v > 0 for v in values):
-                try:
-                    variances.append(statistics.variance(values))
-                except:
-                    pass
-        
+            if len(values) > 1 and sum(values) > 0:
+                variances.append(statistics.variance(values))
         if variances:
             features.behavior_variance_score = statistics.mean(variances)
-    
-    # Classify windows as consistent or inconsistent
-    # Use typing speed as primary metric
-    if valid_speeds:
-        avg_speed = statistics.mean(valid_speeds)
-        std_speed = statistics.stdev(valid_speeds) if len(valid_speeds) > 1 else 0
-        
-        for speed in valid_speeds:
-            # Consistent if within 1 standard deviation
-            if abs(speed - avg_speed) <= std_speed:
-                features.consistent_windows += 1
-            else:
-                features.inconsistent_windows += 1
-    
-    # Detect anomaly clusters
-    # Cluster = 3+ paste/blur events within same window
-    anomaly_threshold = 3
+
+def _classify_windows(typing_speeds: List[float], features: TemporalFeatures) -> None:
+    valid_speeds = [s for s in typing_speeds if s > 0]
+    if not valid_speeds: return
+    avg_speed = statistics.mean(valid_speeds)
+    std_speed = statistics.stdev(valid_speeds) if len(valid_speeds) > 1 else 0
+    for speed in valid_speeds:
+        if abs(speed - avg_speed) <= std_speed:
+            features.consistent_windows += 1
+        else:
+            features.inconsistent_windows += 1
+
+def _analyze_anomaly_clusters(windows: List[List[Dict[str, Any]]], features: TemporalFeatures) -> None:
     anomaly_windows = []
-    
     for i, window in enumerate(windows):
-        paste_blur_count = (
-            len([e for e in window if e.get("event_type") == "paste"]) +
-            len([e for e in window if e.get("event_type") == "blur"])
-        )
-        
-        if paste_blur_count >= anomaly_threshold:
+        count = sum(1 for e in window if e.get("event_type") in ("paste", "blur"))
+        if count >= 3:
             anomaly_windows.append(i)
+            
+    if not anomaly_windows: return
     
-    # Count clusters (consecutive anomalous windows)
-    if anomaly_windows:
-        cluster_count = 1
-        for i in range(1, len(anomaly_windows)):
-            if anomaly_windows[i] != anomaly_windows[i-1] + 1:
-                cluster_count += 1
-        
-        features.anomaly_clusters = cluster_count
-        
-        # Find peak anomaly time
-        # Use middle of most anomalous window
-        max_anomaly_count = 0
-        peak_window_idx = 0
-        
-        for i, window in enumerate(windows):
-            anomaly_count = (
-                len([e for e in window if e.get("event_type") in ["paste", "blur"]])
-            )
-            if anomaly_count > max_anomaly_count:
-                max_anomaly_count = anomaly_count
-                peak_window_idx = i
-        
-        if peak_window_idx < len(windows):
-            peak_window = windows[peak_window_idx]
-            if peak_window:
-                features.peak_anomaly_time = peak_window[len(peak_window)//2]["timestamp"]
+    cluster_count = 1
+    for i in range(1, len(anomaly_windows)):
+        if anomaly_windows[i] != anomaly_windows[i-1] + 1:
+            cluster_count += 1
+    features.anomaly_clusters = cluster_count
     
-    # Detect focus pattern changes
-    # Pattern change = switching between focused and unfocused states
+    max_count = 0
+    peak_idx = 0
+    for i, window in enumerate(windows):
+        c = sum(1 for e in window if e.get("event_type") in ("paste", "blur"))
+        if c > max_count:
+            max_count = c
+            peak_idx = i
+            
+    if peak_idx < len(windows) and windows[peak_idx]:
+        peak_window = windows[peak_idx]
+        features.peak_anomaly_time = peak_window[len(peak_window)//2]["timestamp"]
+
+def _analyze_focus_changes(events: List[Dict[str, Any]], features: TemporalFeatures) -> None:
     focus_states = []
-    
     for event in events:
-        if event.get("event_type") == "blur":
-            focus_states.append(False)
-        elif event.get("event_type") == "focus":
-            focus_states.append(True)
-    
-    # Count state transitions
+        t = event.get("event_type")
+        if t == "blur": focus_states.append(False)
+        elif t == "focus": focus_states.append(True)
+        
     if len(focus_states) > 1:
-        changes = 0
-        for i in range(1, len(focus_states)):
-            if focus_states[i] != focus_states[i-1]:
-                changes += 1
-        features.focus_pattern_changes = changes
+        features.focus_pattern_changes = sum(
+            1 for i in range(1, len(focus_states))
+            if focus_states[i] != focus_states[i-1]
+        )
+
+def extract_temporal_features(events: List[Dict[str, Any]], window_size_ms: int = 60000) -> TemporalFeatures:
+    """Extract temporal consistency features from events."""
+    features = TemporalFeatures()
+    if not events: return features
+    
+    windows = split_into_time_windows(events, window_size_ms)
+    features.total_time_windows = len(windows)
+    if len(windows) < 2: return features
+    
+    typing_speeds, window_features_list = _extract_window_metrics(windows)
+    
+    _analyze_typing_speeds(typing_speeds, features)
+    features.sudden_change_count = detect_behavioral_drift(window_features_list)
+    _analyze_behavior_variance(window_features_list, features)
+    _classify_windows(typing_speeds, features)
+    _analyze_anomaly_clusters(windows, features)
+    _analyze_focus_changes(events, features)
     
     return features
 

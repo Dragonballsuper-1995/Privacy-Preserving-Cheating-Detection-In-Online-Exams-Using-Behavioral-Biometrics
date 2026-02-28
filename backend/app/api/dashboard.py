@@ -15,7 +15,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 
-from app.core.auth import require_instructor, User
+from app.core.auth import require_instructor, UserResponse as User
 from app.api.deps import get_db
 from app.models.session import Session, SessionStatus
 from app.models.exam import Exam
@@ -153,7 +153,7 @@ async def get_risk_distribution(
 
 @router.get("/dashboard/trends", response_model=List[TrendData])
 async def get_trends(
-    period: str = Query("7d", regex="^(7d|30d|90d)$"),
+    period: str = Query("7d", pattern="^(7d|30d|90d)$"),
     exam_id: Optional[str] = None,
     current_user: User = Depends(require_instructor),
     db: DBSession = Depends(get_db)

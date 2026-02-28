@@ -153,147 +153,103 @@ def calculate_trajectory_entropy(points: List[Tuple[float, float]]) -> float:
     return entropy
 
 
-def extract_mouse_features(events: List[Dict[str, Any]], idle_threshold_ms: float = 3000) -> MouseFeatures:
-    """
-    Extract advanced mouse movement features from events.
-    
-    Args:
-        events: List of event dictionaries
-        idle_threshold_ms: Minimum time without movement to count as idle
-        
-    Returns:
-        MouseFeatures dataclass with extracted features
-    """
-    features = MouseFeatures()
-    
-    # Filter mouse events
-    mouse_events = [e for e in events if e.get("event_type") in ["mouse", "click"]]
-    
-    if not mouse_events:
-        return features
-    
-    # Extract mouse movements
-    movements = []
-    clicks = []
-    
+def _extract_raw_events(mouse_events: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    movements, clicks = [], []
     for event in mouse_events:
         event_type = event.get("event_type")
         data = event.get("data", {})
         timestamp = event.get("timestamp", 0)
         
         if event_type == "mouse":
-            x = data.get("x", 0)
-            y = data.get("y", 0)
-            movements.append({"x": x, "y": y, "timestamp": timestamp})
-        
+            movements.append({"x": data.get("x", 0), "y": data.get("y", 0), "timestamp": timestamp})
         elif event_type == "click":
-            button = data.get("button", "left")
-            duration = data.get("duration", 0)
             clicks.append({
-                "button": button,
-                "duration": duration,
+                "button": data.get("button", "left"),
+                "duration": data.get("duration", 0),
                 "timestamp": timestamp
             })
+    return movements, clicks
+
+def _analyze_movements(movements: List[Dict[str, Any]], features: MouseFeatures) -> None:
+    if len(movements) < 2: return
+    features.total_movements = len(movements)
     
-    # Analyze movements
-    if len(movements) >= 2:
-        features.total_movements = len(movements)
-        
-        # Calculate distances, velocities, and accelerations
-        distances = []
-        velocities = []
-        points = [(m["x"], m["y"]) for m in movements]
-        
-        for i in range(1, len(movements)):
-            # Distance
-            dist = calculate_distance(
-                (movements[i-1]["x"], movements[i-1]["y"]),
-                (movements[i]["x"], movements[i]["y"])
-            )
-            distances.append(dist)
-            
-            # Velocity
-            time_delta = movements[i]["timestamp"] - movements[i-1]["timestamp"]
-            velocity = calculate_velocity(dist, time_delta)
-            velocities.append(velocity)
-        
-        if distances:
-            features.total_distance = sum(distances)
-        
-        if velocities:
-            features.avg_velocity = statistics.mean(velocities)
-            features.max_velocity = max(velocities)
-            features.velocity_variance = statistics.variance(velocities) if len(velocities) > 1 else 0.0
-        
-        # Calculate accelerations (change in velocity)
-        if len(velocities) >= 2:
-            accelerations = []
-            for i in range(1, len(velocities)):
-                time_delta = movements[i+1]["timestamp"] - movements[i]["timestamp"]
-                if time_delta > 0:
-                    accel = (velocities[i] - velocities[i-1]) / (time_delta / 1000)
-                    accelerations.append(accel)
-            
-            if accelerations:
-                features.avg_acceleration = statistics.mean([abs(a) for a in accelerations])
-        
-        # Detect sudden direction changes (sharp angles)
-        if len(movements) >= 3:
-            sharp_turns = 0
-            for i in range(1, len(movements) - 1):
-                angle = calculate_angle(
-                    (movements[i-1]["x"], movements[i-1]["y"]),
-                    (movements[i]["x"], movements[i]["y"]),
-                    (movements[i+1]["x"], movements[i+1]["y"])
-                )
-                # Angle > 120 degrees is a sharp turn
-                if angle > 120:
-                    sharp_turns += 1
-            
-            features.sudden_direction_changes = sharp_turns
-        
-        # Calculate trajectory entropy
-        features.trajectory_entropy = calculate_trajectory_entropy(points)
-        
-        # Calculate linear movement ratio
-        # Ratio of straight-line distance to actual path distance
-        if features.total_distance > 0:
-            straight_line_dist = calculate_distance(points[0], points[-1])
-            features.linear_movement_ratio = straight_line_dist / features.total_distance
+    distances, velocities, points = [], [], [(m["x"], m["y"]) for m in movements]
+    for i in range(1, len(movements)):
+        dist = calculate_distance(points[i-1], points[i])
+        distances.append(dist)
+        time_delta = movements[i]["timestamp"] - movements[i-1]["timestamp"]
+        velocities.append(calculate_velocity(dist, time_delta))
     
-    # Analyze clicks
-    if clicks:
-        features.total_clicks = len(clicks)
-        features.left_clicks = sum(1 for c in clicks if c["button"] == "left")
-        features.right_clicks = sum(1 for c in clicks if c["button"] == "right")
-        
-        # Detect double clicks (clicks within 500ms)
-        double_click_threshold = 500
-        for i in range(1, len(clicks)):
-            time_diff = clicks[i]["timestamp"] - clicks[i-1]["timestamp"]
-            if time_diff < double_click_threshold:
-                features.double_clicks += 1
-        
-        # Average click duration
-        durations = [c["duration"] for c in clicks if c["duration"] > 0]
-        if durations:
-            features.avg_click_duration = statistics.mean(durations)
+    if distances: features.total_distance = sum(distances)
+    if velocities:
+        features.avg_velocity = statistics.mean(velocities)
+        features.max_velocity = max(velocities)
+        features.velocity_variance = statistics.variance(velocities) if len(velocities) > 1 else 0.0
     
-    # Detect idle periods
-    if len(movements) >= 2:
-        idle_count = 0
-        idle_durations = []
+    if len(velocities) >= 2:
+        accelerations = []
+        for i in range(1, len(velocities)):
+            time_delta = movements[i+1]["timestamp"] - movements[i]["timestamp"]
+            if time_delta > 0:
+                accelerations.append((velocities[i] - velocities[i-1]) / (time_delta / 1000))
+        if accelerations:
+            features.avg_acceleration = statistics.mean([abs(a) for a in accelerations])
+            
+    if len(movements) >= 3:
+        sharp_turns = sum(
+            1 for i in range(1, len(movements) - 1)
+            if calculate_angle(points[i-1], points[i], points[i+1]) > 120
+        )
+        features.sudden_direction_changes = sharp_turns
         
-        for i in range(1, len(movements)):
-            time_gap = movements[i]["timestamp"] - movements[i-1]["timestamp"]
-            if time_gap > idle_threshold_ms:
-                idle_count += 1
-                idle_durations.append(time_gap)
-        
-        features.idle_periods = idle_count
-        if idle_durations:
-            features.total_idle_time = sum(idle_durations)
-            features.max_idle_duration = max(idle_durations)
+    features.trajectory_entropy = calculate_trajectory_entropy(points)
+    if features.total_distance > 0:
+        straight_line_dist = calculate_distance(points[0], points[-1])
+        features.linear_movement_ratio = straight_line_dist / features.total_distance
+
+def _analyze_clicks(clicks: List[Dict[str, Any]], features: MouseFeatures) -> None:
+    if not clicks: return
+    features.total_clicks = len(clicks)
+    features.left_clicks = sum(1 for c in clicks if c["button"] == "left")
+    features.right_clicks = sum(1 for c in clicks if c["button"] == "right")
+    
+    double_click_threshold = 500
+    features.double_clicks = sum(
+        1 for i in range(1, len(clicks))
+        if (clicks[i]["timestamp"] - clicks[i-1]["timestamp"]) < double_click_threshold
+    )
+    
+    durations = [c["duration"] for c in clicks if c["duration"] > 0]
+    if durations:
+        features.avg_click_duration = statistics.mean(durations)
+
+def _analyze_idle_periods(movements: List[Dict[str, Any]], idle_threshold_ms: float, features: MouseFeatures) -> None:
+    if len(movements) < 2: return
+    idle_durations = [
+        movements[i]["timestamp"] - movements[i-1]["timestamp"]
+        for i in range(1, len(movements))
+        if (movements[i]["timestamp"] - movements[i-1]["timestamp"]) > idle_threshold_ms
+    ]
+    features.idle_periods = len(idle_durations)
+    if idle_durations:
+        features.total_idle_time = sum(idle_durations)
+        features.max_idle_duration = max(idle_durations)
+
+def extract_mouse_features(events: List[Dict[str, Any]], idle_threshold_ms: float = 3000) -> MouseFeatures:
+    """
+    Extract advanced mouse movement features from events.
+    """
+    features = MouseFeatures()
+    mouse_events = [e for e in events if e.get("event_type") in ["mouse", "click"]]
+    if not mouse_events:
+        return features
+    
+    movements, clicks = _extract_raw_events(mouse_events)
+    
+    _analyze_movements(movements, features)
+    _analyze_clicks(clicks, features)
+    _analyze_idle_periods(movements, idle_threshold_ms, features)
     
     return features
 

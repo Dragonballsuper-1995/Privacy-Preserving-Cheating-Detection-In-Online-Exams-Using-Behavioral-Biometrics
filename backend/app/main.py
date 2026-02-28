@@ -146,13 +146,14 @@ app.add_middleware(RequestLoggingMiddleware)
 # Import routers lazily to speed up startup
 def _include_routers():
     """Include API routers - called after app is created."""
-    from app.api import events, sessions, exams, analysis, simulation, evaluation, code_execution, auth_routes, websocket, reviews, models
+    from app.api import events, sessions, exams, analysis, simulation, evaluation, code_execution, auth_routes, websocket, reviews, models, dashboard
     
     app.include_router(auth_routes.router, prefix="/api/auth", tags=["Authentication"])
     app.include_router(events.router, prefix="/api/events", tags=["Events"])
     app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
     app.include_router(exams.router, prefix="/api/exams", tags=["Exams"])
     app.include_router(analysis.router, prefix="/api/analysis", tags=["Analysis"])
+    app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
     app.include_router(reviews.router, prefix="/api/reviews", tags=["Reviews"])
     app.include_router(simulation.router, prefix="/api/simulation", tags=["Simulation"])
     app.include_router(evaluation.router, prefix="/api/evaluation", tags=["Evaluation"])

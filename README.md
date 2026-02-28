@@ -211,6 +211,19 @@ Cheating-Detector/
 | [ADMIN_DASHBOARD.md](docs/ADMIN_DASHBOARD.md) | Admin features guide |
 | [RESEARCH_GUIDE.md](docs/RESEARCH_GUIDE.md) | Theoretical approach |
 | [RESULTS.md](docs/RESULTS.md) | Performance metrics |
+| [PROJECT_HEALTH_REPORT.md](docs/PROJECT_HEALTH_REPORT.md) | CI/CD project health status and overview |
+
+---
+
+## Visualizations & Plots
+
+The project includes automatically generated visual analyses of the ML models and scoring functions:
+
+- **Mathematical & Scoring Models** (`docs/plots/`): Diagrams illustrating heuristic weights, amplifier functions, score combination strategies, anomaly thresholds, and final risk levels.
+- **Pipeline Overviews** (`docs/plots/`): High-level architectural flowcharts and execution pipelines (e.g., feature extraction, anomaly detection, similarity mapping).
+- **Statistical & ML Performance** (`docs/plots/statistical plots/`): Detailed evaluations including ROC curves, Precision-Recall curves, feature importance, isolation forest anomalies, SHAP values, and learning curves.
+
+*(You can dynamically regenerate the main scoring plots by running `python docs/generate_scoring_plots.py`)*
 
 ---
 
