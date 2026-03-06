@@ -82,3 +82,6 @@ stitch_screens/
 # Test Outputs
 backend/pytest_results.txt
 backend/coverage.json
+
+# Research Paper
+IEEE Research Paper Docs/
