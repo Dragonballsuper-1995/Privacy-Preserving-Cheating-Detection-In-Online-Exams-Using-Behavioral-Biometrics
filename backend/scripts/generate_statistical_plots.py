@@ -39,9 +39,9 @@ def sim_data(n_honest=500, n_cheating=200):
     """Simulate realistic model output scores for demonstration."""
     np.random.seed(42)
     # Honest scores are clustered low, but some false positives exist.
-    honest_scores = np.clip(np.random.beta(a=2, b=10, size=n_honest), 0, 1)
+    honest_scores = np.clip(np.random.beta(a=2, b=7, size=n_honest), 0, 1)
     # Cheating scores are clustered high.
-    cheating_scores = np.clip(np.random.beta(a=8, b=2, size=n_cheating), 0, 1)
+    cheating_scores = np.clip(np.random.beta(a=4, b=2, size=n_cheating), 0, 1)
     
     y_true = np.concatenate([np.zeros(n_honest), np.ones(n_cheating)])
     y_scores = np.concatenate([honest_scores, cheating_scores])

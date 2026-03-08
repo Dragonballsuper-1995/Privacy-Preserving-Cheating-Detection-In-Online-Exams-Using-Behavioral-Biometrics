@@ -85,3 +85,7 @@ backend/coverage.json
 
 # Research Paper
 IEEE Research Paper Docs/
+
+# In your .gitignore file
+*.msi
+pandoc-*.msi
