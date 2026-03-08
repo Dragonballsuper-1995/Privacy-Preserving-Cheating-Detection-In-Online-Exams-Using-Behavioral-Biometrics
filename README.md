@@ -131,7 +131,7 @@ docker-compose up -d --build
 ```
 *That's it!* The frontend will be available at `http://localhost:3000` and the API at `http://localhost:8000`.
 
-### ⚡ One-Click Startup (Windows)
+### ⚡ One Click Startup (Windows)
 
 To start both backend and frontend servers locally with a single command:
 
