@@ -1,6 +1,7 @@
 /**
  * API client for backend communication
  */
+import { cache } from 'react';
 
 // Smart API URL detection based on how the frontend is accessed
 export function getApiBase(): string {
@@ -61,6 +62,29 @@ export function clearStoredToken(): void {
 
 export function isAuthenticated(): boolean {
     return getStoredToken() !== null;
+}
+
+// Fetch with timeout + one auto-retry on network errors (handles cold-start "socket hang up")
+async function fetchWithRetry(url: string, options: RequestInit = {}, timeoutMs = 8000, retries = 1): Promise<Response> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const res = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(timer);
+            return res;
+        } catch (err: unknown) {
+            clearTimeout(timer);
+            const isNetworkErr = err instanceof TypeError || (err instanceof DOMException && err.name === 'AbortError');
+            if (attempt < retries && isNetworkErr) {
+                // brief pause before retry
+                await new Promise(r => setTimeout(r, 600));
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw new Error('fetchWithRetry: unreachable');
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -132,7 +156,7 @@ export async function registerUser(
 }
 
 export async function getCurrentUser(): Promise<AuthUser> {
-    const res = await fetch(`${API_BASE}/api/auth/me`, {
+    const res = await fetchWithRetry(`${API_BASE}/api/auth/me`, {
         headers: getAuthHeadersGet(),
     });
     if (!res.ok) throw new Error('Not authenticated');
@@ -220,6 +244,18 @@ export interface RiskScore {
     review_notes?: string;
 }
 
+// Health API
+export async function checkHealth(): Promise<{ status: string; database: string; models: string; initialization_complete: boolean; error: string | null }> {
+    // Note: The frontend also defines `/health` route returning `{status:'ok'}`.
+    // We must explicitly target the backend health endpoint here.
+    const backendBase = API_BASE || 'http://127.0.0.1:8000';
+    const res = await fetch(`${backendBase}/health`, {
+        headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) throw new Error('Health check failed');
+    return res.json();
+}
+
 // Exams API
 export async function listExams(): Promise<{ exams: Exam[] }> {
     const res = await fetch(`${API_BASE}/api/exams/list`);
@@ -295,7 +331,8 @@ export async function getSessionResult(sessionId: string): Promise<SessionResult
 }
 
 // Analysis API
-export async function analyzeSession(sessionId: string): Promise<RiskScore> {
+// cache() deduplicates concurrent calls with the same sessionId within one render
+export const analyzeSession = cache(async (sessionId: string): Promise<RiskScore> => {
     const res = await fetch(`${API_BASE}/api/analysis/analyze`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -303,9 +340,10 @@ export async function analyzeSession(sessionId: string): Promise<RiskScore> {
     });
     if (!res.ok) throw new Error('Failed to analyze session');
     return res.json();
-}
+});
 
-export async function getDashboardSummary(): Promise<{
+// cache() deduplicates concurrent calls in the same render (e.g. page + metadata)
+export const getDashboardSummary = cache(async (): Promise<{
     total_sessions: number;
     flagged_sessions: number;
     sessions: {
@@ -324,13 +362,14 @@ export async function getDashboardSummary(): Promise<{
         created_at?: string;
         is_simulated?: boolean;
     }[];
-}> {
-    const res = await fetch(`${API_BASE}/api/analysis/dashboard/summary`, {
+}> => {
+    const res = await fetchWithRetry(`${API_BASE}/api/analysis/dashboard/summary`, {
         headers: getAuthHeadersGet(),
     });
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
     if (!res.ok) throw new Error('Failed to fetch dashboard');
     return res.json();
-}
+});
 
 // New Category APIs
 export async function getCategories(): Promise<{ categories: { id: string; name: string; description: string }[] }> {

@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import "@fontsource/outfit/400.css";
-import "@fontsource/outfit/600.css";
-import "@fontsource/outfit/800.css";
-import "@fontsource/geist-sans/400.css";
-import "@fontsource/geist-sans/500.css";
-import "@fontsource/geist-sans/600.css";
-import "@fontsource/geist-sans/700.css";
-import "@fontsource/geist-mono/400.css";
-import "@fontsource/geist-mono/700.css";
+import "@fontsource/space-grotesk/300.css";
+import "@fontsource/space-grotesk/400.css";
+import "@fontsource/space-grotesk/500.css";
+import "@fontsource/space-grotesk/600.css";
+import "@fontsource/space-grotesk/700.css";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AnimatedBackground } from "@/components/animated-background";
 
 export const metadata: Metadata = {
   title: "Cheating Detection System",
@@ -24,6 +19,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Preconnect to Google Fonts for faster DNS lookup */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Material Symbols — loaded with display=block to reduce layout shift */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+          rel="stylesheet"
+        />
+      </head>
       <body
         className={`antialiased selection:bg-primary selection:text-white font-sans transition-colors duration-300`}
         suppressHydrationWarning
@@ -34,12 +39,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AnimatedBackground />
-          <div className="relative z-10">
-            {children}
-          </div>
+          {children}
         </ThemeProvider>
       </body>
     </html>
   );
 }
+

@@ -21,11 +21,8 @@ export default function LoginPage() {
             if (isAuthenticated()) {
                 try {
                     const user: AuthUser = await getCurrentUser();
-                    if (user.role === 'admin' || user.role === 'instructor') {
-                        router.push('/admin');
-                    } else {
-                        router.push('/');
-                    }
+                    const redirectTo = (user.role === 'admin' || user.role === 'instructor') ? '/admin' : '/';
+                    router.push(redirectTo);
                     return;
                 } catch {
                     // Token invalid, continue to login
@@ -52,11 +49,8 @@ export default function LoginPage() {
 
             // Check user role and redirect
             const user = await getCurrentUser();
-            if (user.role === 'admin' || user.role === 'instructor') {
-                router.push('/admin');
-            } else {
-                router.push('/');
-            }
+            const redirectTo = (user.role === 'admin' || user.role === 'instructor') ? '/admin' : '/';
+            router.push(redirectTo);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'ACCESS_DENIED:_UNAUTHORIZED');
         } finally {
@@ -76,13 +70,33 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen text-foreground font-sans flex items-center justify-center p-4 selection:bg-accent selection:text-background">
-            <div className="w-full max-w-md rounded-2xl border border-border/50 bg-card shadow-xl relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center p-4 selection:bg-accent selection:text-background relative">
+            <div className="absolute inset-0 bg-cyber-grid pointer-events-none opacity-10"></div>
+            <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 rounded-2xl glass-panel relative overflow-hidden z-10 shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-primary/20">
 
-                {/* Subtle top gradient bar */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-primary/60 to-primary" />
+                {/* Left side info */}
+                <div className="hidden md:flex flex-col justify-between p-12 relative overflow-hidden bg-primary/5">
+                    <div className="absolute inset-0 bg-cyber-grid pointer-events-none opacity-30"></div>
+                    <div className="relative z-10">
+                        <div className="p-3 rounded-xl bg-primary/20 text-primary mb-6 ring-1 ring-primary/30 inline-flex">
+                            <ShieldAlert className="w-8 h-8" />
+                        </div>
+                        <h2 className="font-display text-4xl font-bold tracking-tight text-foreground mb-4">
+                            System Access
+                        </h2>
+                        <p className="font-sans text-lg text-muted-foreground">
+                            Authenticate to access the Overseer Protocol. All sessions are monitored for security compliance.
+                        </p>
+                    </div>
+                    <div className="relative z-10 mt-12">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-primary/20 text-primary text-xs font-mono shadow-[0_0_10px_rgba(195,180,253,0.2)]">
+                            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                            ENVIRONMENT: SECURE
+                        </div>
+                    </div>
+                </div>
 
-                <div className="p-8 md:p-10">
+                <div className="p-8 md:p-12 relative bg-card/30 backdrop-blur-md border-l border-white/5">
                     {/* Header */}
                     <div className="mb-8 text-center flex flex-col items-center">
                         <div className="p-3 rounded-xl bg-primary/10 text-primary mb-4 ring-1 ring-primary/20">
@@ -119,7 +133,7 @@ export default function LoginPage() {
                                         type="text"
                                         value={fullName}
                                         onChange={(e) => setFullName(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border/50 bg-background font-sans text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow shadow-sm"
+                                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border/50 bg-background font-sans text-sm outline-none shadow-sm input-glow"
                                         placeholder="Jane Doe"
                                     />
                                 </div>
@@ -138,7 +152,7 @@ export default function LoginPage() {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border/50 bg-background font-sans text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow shadow-sm"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border/50 bg-background font-sans text-sm outline-none shadow-sm input-glow"
                                     placeholder="admin@example.com"
                                     required
                                 />
@@ -157,7 +171,7 @@ export default function LoginPage() {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border/50 bg-background font-sans text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow shadow-sm"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border/50 bg-background font-sans text-sm outline-none shadow-sm input-glow"
                                     placeholder="••••••••"
                                     required
                                     minLength={4}

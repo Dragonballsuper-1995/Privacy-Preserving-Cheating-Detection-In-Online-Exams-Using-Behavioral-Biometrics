@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { getModelMetrics, triggerRetraining, ModelMetrics } from '@/lib/api';
 import Link from 'next/link';
-import { Activity, AlertTriangle, CheckCircle, Database, RefreshCw, Layers, ArrowLeft } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Database, RefreshCw, Layers, ArrowLeft, Cpu } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function ModelsDashboard() {
-    const router = useRouter();
     const [metrics, setMetrics] = useState<ModelMetrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -20,8 +18,8 @@ export default function ModelsDashboard() {
             try {
                 const data = await getModelMetrics();
                 setMetrics(data);
-            } catch (err: any) {
-                setError(err.message || 'Failed to load model metrics');
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Failed to load model metrics');
             } finally {
                 setLoading(false);
             }
@@ -36,8 +34,8 @@ export default function ModelsDashboard() {
         try {
             const res = await triggerRetraining();
             setRetrainMsg(res.message);
-        } catch (err: any) {
-            setRetrainMsg(`Error: ${err.message || 'Failed to trigger retraining'}`);
+        } catch (err: unknown) {
+            setRetrainMsg(`Error: ${err instanceof Error ? err.message : 'Failed to trigger retraining'}`);
         } finally {
             setIsRetraining(false);
             // Optionally refresh metrics after some time
@@ -107,27 +105,56 @@ export default function ModelsDashboard() {
     }
 
     return (
-        <div className="min-h-screen text-foreground font-sans selection:bg-accent selection:text-background pb-20">
-            <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 mb-8">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link href="/admin" className="p-2 rounded-lg border border-border/50 bg-secondary/30 hover:bg-secondary hover:text-foreground transition-all shadow-sm">
-                            <ArrowLeft className="w-5 h-5" />
-                        </Link>
-                        <div>
-                            <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
-                                <Activity className="w-8 h-8 text-primary" />
-                                MLOps Terminal
-                            </h1>
-                            <p className="font-sans text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">Model Drift Monitoring</p>
+        <div className="min-h-screen flex text-foreground font-sans selection:bg-accent selection:text-background relative">
+            <div className="absolute inset-0 bg-cyber-grid pointer-events-none opacity-10"></div>
+            
+            {/* Dark Side Nav */}
+            <aside className="hidden lg:flex flex-col w-72 glass-panel rounded-none border-r border-white/5 z-40 sticky top-0 h-screen bg-[#0f0f13]/90">
+                <div className="p-6 border-b border-white/5">
+                    <h1 className="font-display text-2xl font-bold tracking-tight flex items-center gap-3">
+                        <Activity className="w-7 h-7 text-primary" />
+                        Overseer
+                    </h1>
+                    <p className="font-mono text-[10px] text-primary/70 tracking-widest uppercase mt-2">v2.0 Integrity Matrix</p>
+                </div>
+                <nav className="flex-1 p-4 space-y-2">
+                    <div className="font-sans text-xs font-bold text-muted-foreground uppercase tracking-widest px-4 pb-2 pt-4">Modules</div>
+                    <Link href="/admin" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-foreground font-medium transition-all group">
+                        <Cpu className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        Live Feed
+                    </Link>
+                    <Link href="/admin/models" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/20 text-primary border border-primary/20 shadow-[0_0_15px_rgba(195,180,253,0.15)] font-semibold transition-all">
+                        <Database className="w-5 h-5" />
+                        ML Models
+                    </Link>
+                </nav>
+                <div className="p-6 border-t border-white/5">
+                    <Link href="/" className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Exit Portal
+                    </Link>
+                </div>
+            </aside>
+
+            <div className="flex-1 flex flex-col min-w-0 z-10 w-full">
+                <header className="sticky top-0 z-30 glass-panel rounded-none border-b border-white/5 bg-[#130f23]/80 mb-8">
+                    <div className="w-full mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 lg:hidden">
+                            <Link href="/admin" className="p-2 rounded-lg border border-border/50 bg-white/5 hover:bg-white/10 transition-colors">
+                                <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                            </Link>
+                            <h1 className="font-display text-xl font-bold tracking-tight text-primary">MLOps Terminal</h1>
+                        </div>
+                        <div className="hidden lg:block">
+                            <h2 className="font-display text-2xl font-bold tracking-tight">Model Monitor</h2>
+                        </div>
+                        <div className="ml-auto">
+                            <ThemeToggle />
                         </div>
                     </div>
-                    <ThemeToggle />
-                </div>
-            </header>
+                </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="flex flex-col md:flex-row md:items-start md:items-center md:justify-between mb-10 gap-6">
+                <main className="w-full max-w-7xl mx-auto px-4 md:px-8 pb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
                     <div>
                         <h1 className="text-3xl font-display font-semibold text-foreground tracking-tight flex items-center gap-2">
                             <Layers className="w-8 h-8 text-primary" />
@@ -179,7 +206,7 @@ export default function ModelsDashboard() {
 
                         {/* Top level stats */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <div className="bg-card p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col gap-4">
+                            <div className="glass-panel p-6 shadow-sm border border-white/5 flex flex-col gap-4">
                                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                                     <Database className="h-5 w-5 text-primary" />
                                 </div>
@@ -188,7 +215,7 @@ export default function ModelsDashboard() {
                                     <p className="font-mono text-3xl font-bold text-foreground mt-1">{metrics.total_sessions}</p>
                                 </div>
                             </div>
-                            <div className="bg-card p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col gap-4">
+                            <div className="glass-panel p-6 shadow-sm border border-white/5 flex flex-col gap-4">
                                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                                     <Layers className="h-5 w-5 text-primary" />
                                 </div>
@@ -197,7 +224,7 @@ export default function ModelsDashboard() {
                                     <p className="font-mono text-3xl font-bold text-foreground mt-1">{metrics.reviewed_sessions_count}</p>
                                 </div>
                             </div>
-                            <div className="bg-card p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col gap-4">
+                            <div className="glass-panel p-6 shadow-sm border border-white/5 flex flex-col gap-4">
                                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                                     <Activity className="h-5 w-5 text-primary" />
                                 </div>
@@ -219,41 +246,57 @@ export default function ModelsDashboard() {
                                 Subsystem Distribution Drift (K-S)
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {Object.entries(metrics.metrics).map(([featureName, driftData]) => (
-                                    <div key={featureName} className={`bg-card rounded-2xl shadow-sm border overflow-hidden transition-all hover:shadow-md ${driftData.drift_detected ? 'border-destructive/30' : 'border-border/50'}`}>
-                                        <div className={`px-5 py-4 border-b ${driftData.drift_detected ? 'bg-destructive/10 border-destructive/20' : 'bg-secondary/30 border-border/50'}`}>
-                                            <h3 className={`font-sans tracking-wider uppercase text-sm font-bold border-b-0 ${driftData.drift_detected ? 'text-destructive' : 'text-foreground'}`}>
-                                                {featureName.replace('_', ' ')}
-                                            </h3>
-                                        </div>
-                                        <div className="p-6 space-y-4">
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-sans text-xs font-medium text-muted-foreground uppercase tracking-widest">Drift Level</span>
-                                                {driftData.drift_detected ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest bg-destructive/10 text-destructive border border-destructive/20 shadow-sm">
-                                                        Detected
-                                                    </span>
+                                {Object.entries(metrics.metrics).map(([featureName, driftData]) => {
+                                    const state = isRetraining ? 'training' : (driftData.drift_detected ? 'deprecated' : 'online');
+                                    return (
+                                        <div key={featureName} className={`glass-panel overflow-hidden transition-all hover:shadow-[0_0_20px_rgba(195,180,253,0.15)] ${state === 'deprecated' ? 'grayscale opacity-80 border-white/5' : 'border-white/10'}`}>
+                                            <div className="px-5 py-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                                                <h3 className="font-sans tracking-wider uppercase text-sm font-bold text-foreground">
+                                                    {featureName.replace('_', ' ')}
+                                                </h3>
+                                                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest shadow-sm border ${state === 'online' ? 'bg-primary/20 text-primary border-primary/30' : state === 'training' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' : 'bg-muted/20 border-border/50 text-muted-foreground'}`}>
+                                                    {state === 'online' && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+                                                    {state === 'training' && <RefreshCw className="w-3 h-3 animate-spin" />}
+                                                    {state}
+                                                </span>
+                                            </div>
+                                            <div className="p-6 space-y-4">
+                                                {state === 'training' ? (
+                                                    <div className="py-4 space-y-2">
+                                                        <div className="flex justify-between text-xs font-mono text-muted-foreground">
+                                                            <span>Epoch 34/100</span>
+                                                            <span>68%</span>
+                                                        </div>
+                                                        <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                                                            <div className="h-full bg-yellow-500 w-[68%] rounded-full opacity-80 animate-pulse" />
+                                                        </div>
+                                                    </div>
                                                 ) : (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest bg-secondary text-foreground shadow-sm">
-                                                        Nominal
-                                                    </span>
+                                                    <>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="font-sans text-xs font-medium text-muted-foreground uppercase tracking-widest">Drift Status</span>
+                                                            <span className="font-mono text-sm font-semibold pr-1 text-foreground">
+                                                                {driftData.drift_detected ? 'Detected' : 'Nominal'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="font-sans text-xs font-medium text-muted-foreground uppercase tracking-widest">p-value</span>
+                                                            <span className={`font-mono text-sm font-semibold pr-1 ${driftData.p_value < 0.05 ? 'text-destructive' : 'text-foreground'}`}>
+                                                                {driftData.p_value.toExponential(2)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="font-sans text-xs font-medium text-muted-foreground uppercase tracking-widest">KS Stat</span>
+                                                            <span className="font-mono text-sm font-semibold pr-1 text-foreground">
+                                                                {driftData.statistic.toFixed(4)}
+                                                            </span>
+                                                        </div>
+                                                    </>
                                                 )}
                                             </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-sans text-xs font-medium text-muted-foreground uppercase tracking-widest">p-value</span>
-                                                <span className={`font-mono text-sm font-semibold pr-1 ${driftData.p_value < 0.05 ? 'text-destructive' : 'text-foreground'}`}>
-                                                    {driftData.p_value.toExponential(2)}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-sans text-xs font-medium text-muted-foreground uppercase tracking-widest">KS Stat</span>
-                                                <span className="font-mono text-sm font-semibold pr-1 text-foreground">
-                                                    {driftData.statistic.toFixed(4)}
-                                                </span>
-                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
                                 {Object.keys(metrics.metrics).length === 0 && (
                                     <div className="col-span-full py-16 text-center text-muted-foreground bg-secondary/20 rounded-2xl border border-border/50 border-dashed">
@@ -265,7 +308,8 @@ export default function ModelsDashboard() {
 
                     </div>
                 )}
-            </main>
+                </main>
+            </div>
         </div>
     );
 }

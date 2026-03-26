@@ -70,7 +70,7 @@ export function CodeEditor({
                     scrollBeyondLastLine: false,
                     fontSize: 14,
                     lineNumbers: 'on',
-                    automaticLayout: true,
+                    automaticLayout: false,
                     tabSize: 4,
                     insertSpaces: true,
                     wordWrap: 'on',

@@ -135,7 +135,7 @@ export function useAdminWebSocket({
                 }
             };
 
-            ws.onclose = () => {
+            ws.onclose = (event) => {
                 setConnected(false);
                 wsRef.current = null;
 

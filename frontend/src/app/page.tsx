@@ -127,16 +127,29 @@ export default function HomePage() {
 
         <div className="flex flex-col md:flex-row gap-12 items-start mb-16">
           <div className="md:w-1/2 space-y-6 sticky top-24">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 border border-primary/20 text-primary text-xs font-mono mb-4">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+              SYSTEM.STATUS: OPTIMAL
+            </div>
             <h2 className="font-display text-5xl md:text-7xl font-bold tracking-tight leading-tight">
-              Secure
+              Truth,
               <br />
-              <span className="text-primary">Assessment</span>
+              Detected by
               <br />
-              Node
+              <span className="text-primary glow-text">Pure Intelligence.</span>
             </h2>
             <p className="font-sans text-lg text-muted-foreground max-w-xl border-l-4 border-primary pl-4">
-              Access scheduled assessments. System securely monitors keystroke telemetry, behavioral heuristics, and syntactical variance. Visual and audio surveillance is deactivated for privacy compliance.
+              The nexus of academic integrity. No cameras. No privacy invasions. Just absolute certainty powered by behavioral heuristics and algorithmic analysis.
             </p>
+            <div className="flex gap-4 pt-4">
+              <Link href="/login" className="px-8 py-3 rounded-full bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(195,180,253,0.3)]">
+                Initialize Core
+              </Link>
+              <a href="#features" className="px-8 py-3 rounded-full bg-secondary text-secondary-foreground font-semibold hover:bg-secondary/80 transition-all border border-border inline-flex items-center gap-2">
+                View Specs
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
           </div>
 
           <div className="md:w-1/2 w-full">
@@ -162,8 +175,10 @@ export default function HomePage() {
 
             {/* Exams Data Matrix */}
             {!loading && !error && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="space-y-6 glass-panel p-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-cyber-grid pointer-events-none opacity-20"></div>
+                <div className="absolute inset-x-0 h-px bg-primary/40 animate-scan-line shadow-[0_0_10px_rgba(195,180,253,0.5)]"></div>
+                <div className="relative z-10 flex items-center justify-between border-b border-border/50 pb-4">
                   <h2 className="font-display text-2xl font-semibold tracking-tight flex items-center gap-3">
                     <FileText className="w-6 h-6 text-primary" />
                     Available Exams
@@ -230,17 +245,22 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Feature Boxes (Moved to bottom) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-          <div className="p-8 rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow">
-            <Shield className="w-12 h-12 mb-4 text-primary" />
+        {/* Feature Boxes */}
+        <div id="features" className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+          <div className="p-8 glass-panel hover:shadow-lg transition-all hover:-translate-y-1">
+            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-6">
+              <Shield className="w-6 h-6 text-primary" />
+            </div>
             <h3 className="font-sans text-xl font-semibold mb-3">Privacy First</h3>
             <p className="font-sans text-muted-foreground leading-relaxed">No camera or microphone required. Silent detection via advanced keyboard telemetry and algorithmic behavioral analysis, completely protecting user environments while maintaining rigorous integrity standards.</p>
           </div>
-          <div className="p-8 rounded-xl border border-border bg-primary text-primary-foreground shadow-sm hover:shadow-md transition-shadow">
-            <Activity className="w-12 h-12 mb-4 text-primary-foreground" />
-            <h3 className="font-sans text-xl font-semibold mb-3">Neural Analysis</h3>
-            <p className="font-sans text-primary-foreground/90 leading-relaxed">AI models continuously monitor typing cadence, hesitation metrics, clipboard activities, and browser focus loss events in real-time to detect anomalous behavioral patterns and provide a deterministic risk quotient.</p>
+          <div className="p-8 glass-panel relative overflow-hidden border-primary/30 hover:shadow-[0_0_30px_rgba(195,180,253,0.15)] transition-all hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative z-10">
+              <Activity className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="font-sans text-xl font-semibold mb-3 relative z-10">Neural Analysis</h3>
+            <p className="font-sans text-muted-foreground leading-relaxed relative z-10">AI models continuously monitor typing cadence, hesitation metrics, clipboard activities, and browser focus loss events in real-time to detect anomalous behavioral patterns and provide a deterministic risk quotient.</p>
           </div>
         </div>
       </main>

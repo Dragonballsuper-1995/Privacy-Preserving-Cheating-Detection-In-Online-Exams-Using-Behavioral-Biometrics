@@ -16,6 +16,7 @@ from app.core.config import settings
 # Track initialization state
 _app_state = {
     "database_ready": False,
+    "models_ready": False,
     "initializing": False,
     "error": None,
     "start_time": time.time(),
@@ -57,6 +58,16 @@ async def _background_init():
             db.close()
         except Exception as e:
             print(f"⚠️ Admin seed skipped: {e}")
+            
+        print("🧠 Initializing ML models in background...")
+        try:
+            from app.ml.embeddings import get_model
+            # Force model load
+            get_model()
+            _app_state["models_ready"] = True
+            print("✨ ML models ready!")
+        except Exception as e:
+            print(f"⚠️ ML models background load failed: {e}")
         
     except Exception as e:
         _app_state["error"] = str(e)
@@ -179,9 +190,10 @@ async def root():
 async def health_check():
     """Detailed health check with initialization status."""
     return {
-        "status": "healthy",
+        "status": "healthy" if _app_state["database_ready"] and _app_state["models_ready"] else "initializing",
         "database": "ready" if _app_state["database_ready"] else "initializing",
-        "initialization_complete": _app_state["database_ready"],
+        "models": "ready" if _app_state["models_ready"] else "initializing",
+        "initialization_complete": _app_state["database_ready"] and _app_state["models_ready"],
         "error": _app_state["error"]
     }
 
